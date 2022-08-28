@@ -1,0 +1,56 @@
+/t [placa za sve] ( [tko prima] [količina] ) * n
+/t tvrtko karlo 10
+/t tvrtko karlo 10 grgur 15 jura 5
+# (transaction)
+# Tvrtko je dao Karlu 10 kn, Grguru 14 kn i Juri 5 kn
+
+/td [placa za sve] [tko sve prima]*n [količina]
+/td tvrtko karlo grgur jura 1000
+# (transaction division)
+# Tvrtko je platio rundu za sve (uključujući njega)
+
+/na [osoba] * n
+/na tvrtko karlo jura
+# (name add)
+# dodaje n osoba na listu sa vrijednosti 0
+
+/nr [osoba]
+/nr tvrtko
+# (name remove)
+# briše osobu sa listu ako ima vrijednost 0
+
+/nc [staro ime] [novo ime]
+/nc tvrtko tvrtkonator
+# (name change)
+# mijenja ime osobe
+
+/u
+# (undo)
+# vratit će stanje liste prije posljednje promjene
+# radi samo za komande koje utječu na listu za dugove(t, tm, na, nr, nc)
+
+/s
+# (state)
+# bot vrača trenutno stanje liste
+
+/r
+# (random)
+# bot vrača nasumično ime sa liste
+
+/cl
+# (custom commands list)
+# lista custom komandi
+
+/cc [komanda] [izlaz]
+# (command create)
+# napravi custom komandu
+
+/cr [komanda]
+# (command remove)
+# izbriši custom komandu
+
+/[custom komanda]
+# bot vrača custom vrijednost
+
+/h
+# (help)
