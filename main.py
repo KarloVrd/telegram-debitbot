@@ -1,5 +1,6 @@
 # -*- coding: UTF8 -*-
 from tkinter import E
+from turtle import update
 import requests
 import time
 
@@ -115,19 +116,21 @@ class BotApi:
                     if "text" in current_update["message"] and current_update["message"]["text"][0] == "/":
                         update_text = (
                             current_update["message"]["text"][1:]
+                            .split("#")[0]
                             .replace("\n", " ")
                             .split(" ")
+                    
                         )
                     else:
                         continue
 
-                    
+                    update_text = [i for i in update_text if i != ""]
+
+                    print(update_text)
                     chat_id = current_update["message"]["chat"]["id"]
                     
                     if not security_check(current_update, chat_id):
                         continue
-
-                    # print(current_update)
 
                     # dictionery za input
                     # ime razgovora ili osobe
@@ -168,6 +171,7 @@ class BotApi:
                 except Exception as e:  #    ERROR
                     print(e)
                     msg_out = "Invalid command"
+
                 magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
 
         return True
