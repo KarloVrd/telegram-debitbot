@@ -57,6 +57,32 @@ class DebitHandler:
         else:
             return False
 
+    @staticmethod
+    def resolvingAlgebraFormations(array: list) -> list:
+            i = 0
+            algbrStr = ""
+            while (i < len(array)):
+                if DebitHandler.is_eng_str(array[i]) == False:
+                    algbrStr += array[i]
+                
+                else:
+                    array[i-1] = str(eval(" ".join(array[i-1:i+2])))
+                    algbrStr = ""
+
+                if array[i] in "+-/*":
+                    print(array[i-1:i+2])
+                    array[i-1] = str(eval(" ".join(array[i-1:i+2])))
+                    array.pop(i+1)
+                    array.pop(i)
+                    i -= 2
+                    print(i, array)
+
+                i += 1
+
+            return array
+        # except:
+        #     return NULL
+
     def group_create(self, args):
         state = self.load_data()
         key_word = args[0].upper()
@@ -560,3 +586,8 @@ class DebitHandler:
         L = state.values()
         L = [float(i) for i in L]
         return (round(sum(L), 4), 0)
+
+if __name__ == '__main__':
+    array = ['Transaction:','3', '+','5', '-','4','.']
+    array = DebitHandler.resolvingAlgebraFormations(array)
+    print("Array:",array)
