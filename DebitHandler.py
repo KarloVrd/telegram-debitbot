@@ -1,3 +1,5 @@
+from json import load
+from numpy import true_divide
 from LogsHandler import LogsHandler
 import os
 import random
@@ -39,6 +41,7 @@ class DebitHandler:
             "gp": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
+            "currencyconvert": self.currencyConvert,
         }
 
     @staticmethod
@@ -56,6 +59,32 @@ class DebitHandler:
             return True
         else:
             return False
+
+    @staticmethod
+    def resolvingAlgebraFormations(array: list) -> list:
+            i = 0
+            isLastNum: bool = False
+            while (i < len(array)):
+                if DebitHandler.is_eng_str(array[i]) == False:
+                    if isLastNum:
+                        array[i - 1] = array[i - 1] + array[i]
+                        array.pop(i)
+                    else:
+                        i += 1
+                    isLastNum = True
+                
+                else:
+                    if isLastNum == True:
+                        array[i-1] = eval(array[i-1])
+                    isLastNum = False
+                    i += 1
+
+            if isLastNum == True:
+                array[-1] = eval(array[-1])
+
+            return array
+        # except:
+        #     return NULL
 
     def group_create(self, args):
         state = self.load_data()
@@ -267,7 +296,7 @@ class DebitHandler:
 
         return msg_out
 
-    def load_data(self, path=False):
+    def load_data(self, path=False) -> dict:
         if not path:
             path = self.data_path
         data = dict()
@@ -406,6 +435,7 @@ class DebitHandler:
         return ("Name changed", 1)
 
     def division_transaction(self, args):
+        args = DebitHandler.resolvingAlgebraFormations(args)
         data = self.load_data()
 
         don = args[0].capitalize()
@@ -438,6 +468,8 @@ class DebitHandler:
         return ("Transaction complete", 1)
 
     def transaction(self, args):
+        args = DebitHandler.resolvingAlgebraFormations(args)
+
         data = self.load_data()
         don = args[0].capitalize()
         recs = list(map(lambda x: x.capitalize(), args[1::2]))
@@ -466,6 +498,7 @@ class DebitHandler:
         return ("Transaction complete", 1)
 
     def group_transaction(self, args):
+        args = DebitHandler.resolvingAlgebraFormations(args)
         state = self.load_data()
 
         don = args[0].capitalize()
@@ -499,6 +532,7 @@ class DebitHandler:
         return (random.choice(keys), 0)
 
     def division_transaction_inverse(self, args):
+        args = DebitHandler.resolvingAlgebraFormations(args)
         don = args[0].capitalize()
         rec = args[1:-1]
         money = float(args[-1])
@@ -510,6 +544,8 @@ class DebitHandler:
             self.updata_value(i.capitalize(), money_per_person)
 
     def transaction_inverse(self, args):
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        
         don = args[0].capitalize()
         recs = list(map(lambda x: x.capitalize(), args[1::2]))
         amounts = list(map(lambda x: float(x), args[2::2]))
@@ -560,3 +596,18 @@ class DebitHandler:
         L = state.values()
         L = [float(i) for i in L]
         return (round(sum(L), 4), 0)
+
+    def currencyConvert(self, args:list):
+        multiplier: float = float(args[0])
+        state = self.load_data()
+        name: str
+        for name in state.keys():
+            state[name] = float(state[name]) * multiplier
+
+        self.save_state(state)
+        return ("Currency converted",1)
+
+if __name__ == '__main__':
+    array = ['Transaction','3', '+','5', '-','4','-4', 'Karlo', 'Jura', "(4+90)",'/3','Gjuto',"-3"]
+    array = DebitHandler.resolvingAlgebraFormations(array)
+    print("Array:",array)
