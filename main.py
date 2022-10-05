@@ -1,5 +1,6 @@
 # -*- coding: UTF8 -*-
 from tkinter import E
+import traceback
 from turtle import update
 import requests
 import time
@@ -170,6 +171,8 @@ class BotApi:
 
                 except Exception as e:  #    ERROR
                     print(e)
+                    traceback.print_exc()
+
                     msg_out = "Invalid command"
 
                 magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])

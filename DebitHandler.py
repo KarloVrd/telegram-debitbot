@@ -1,3 +1,4 @@
+from json import load
 from numpy import true_divide
 from LogsHandler import LogsHandler
 import os
@@ -40,6 +41,7 @@ class DebitHandler:
             "gp": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
+            "currencyconvert": self.currencyConvert,
         }
 
     @staticmethod
@@ -294,7 +296,7 @@ class DebitHandler:
 
         return msg_out
 
-    def load_data(self, path=False):
+    def load_data(self, path=False) -> dict:
         if not path:
             path = self.data_path
         data = dict()
@@ -594,6 +596,16 @@ class DebitHandler:
         L = state.values()
         L = [float(i) for i in L]
         return (round(sum(L), 4), 0)
+
+    def currencyConvert(self, args:list):
+        multiplier: float = float(args[0])
+        state = self.load_data()
+        name: str
+        for name in state.keys():
+            state[name] = float(state[name]) * multiplier
+
+        self.save_state(state)
+        return ("Currency converted",1)
 
 if __name__ == '__main__':
     array = ['Transaction','3', '+','5', '-','4','-4', 'Karlo', 'Jura', "(4+90)",'/3','Gjuto',"-3"]
