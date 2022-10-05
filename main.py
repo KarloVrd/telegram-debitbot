@@ -1,7 +1,5 @@
 # -*- coding: UTF8 -*-
-from tkinter import E
 import traceback
-from turtle import update
 import requests
 import time
 

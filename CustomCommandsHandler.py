@@ -1,14 +1,14 @@
 import os
 from DebitHandler import DebitHandler
 from sys import platform
-
+import paths
 
 class CCHandler:
     def __init__(self):
         if platform == "win32":
             self.relative_path = os.path.dirname(__file__)
         else:
-            self.relative_path = "/storage/emulated/0/Moji programi/DebitBot_v6"
+            self.relative_path = paths.relativePath
             
         self.custom_commands_path = os.path.join(self.relative_path, "custom_comm.txt")
         self.custom_commands = self.load_custom_commands()

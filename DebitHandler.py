@@ -1,19 +1,16 @@
-from json import load
-from numpy import true_divide
 from LogsHandler import LogsHandler
 import os
 import random
 import glob
-import math
 from sys import platform
-
+import paths
 
 class DebitHandler:
     def __init__(self):
         if platform == "win32":
             self.relative_path = os.path.dirname(__file__)
         else:
-            self.relative_path = "/storage/emulated/0/Moji programi/DebitBot_v6"
+            self.relative_path = paths.relativePath
         self.help_path = os.path.join(self.relative_path, "help.txt")
 
         self.invers_commands = {
@@ -188,7 +185,6 @@ class DebitHandler:
         groups = self.load_groups()
         don = command[1].capitalize()
         if key_word in groups:
-            print(groups)
 
             members = groups[key_word]
             members.remove(don)
@@ -581,12 +577,11 @@ class DebitHandler:
         command = LogsHandler.get_undo_last_command(path)
         if str(command) == "None":
             return ("Nothing to undo", 0)
-        print(command)
+
         if command[2] == command[2].upper():
             x = self.inverse_group_check(command)
             if x != 0:
                 command = x
-        print(command)
         self.invers_commands[command[0][1:]](command[1:])
         return ("Undone", 1)
 
