@@ -23,64 +23,64 @@ Removes group
 /gr [group name]
 /gr party
 
-Group print
+--Group print--
 Returns a list of groups
 /gp
 
-Transaction
+--Transaction--
 Make transaction
 /t [surplus user] ([deficit user] [amount]) * n
 /t tvrtko karlo 10
 /t tvrtko karlo 10 grgur 20 jura 15
 
-Transaction division
+--Transaction division--
 Make transaction that divides deficit among all people listed (including surplus user).
 /td [surplus user] [deficit user] * n [amount]
 /td tvrtko karlo grgur jura 1000
 
-Transaction group
+--Transaction group--
 Functions like Transaction division but with preselected users saved in a group.
 /tg [surplus user] [group name] [amount]
 /tg tvrtko party 500
 
-State force
+--State force--
 Allows user to set the state manually. Inbalance will be divided among users.
 /sf ([user] [balance]) * n
 /sf tvrtko 10 grgur 5 jura -5 karlo -10
 
-State
+--State--
 Returns state
 /s
 
-Undo
+--Undo--
 Undoes last transaction (Only transactions).
 /u
 
-Random
+--Random--
 Returns random user from a list
 /r
 
-Custom command
+--Custom command--
 Returns output for custom command
 /[custom command]
 
-Custom commands list
+--Custom commands list--
 Returns list of custom commands
 /cl
 
-Command create
+--Command create--
 Creates custom command
 /cc [command] [output]
 
-Command remove
+--Command remove--
 Removes custom command
 /cr [command]
 
-Help
+--Help--
 Returns help message
 /h
 
-Command tips 'n' tricks:
+--Command tips 'n' tricks--
 You can put math expresions as amount. 
 /t tvrtko karlo 5*7.53
 
