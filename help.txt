@@ -1,56 +1,93 @@
-/t [placa za sve] ( [tko prima] [količina] ) * n
-/t tvrtko karlo 10
-/t tvrtko karlo 10 grgur 15 jura 5
-# (transaction)
-# Tvrtko je dao Karlu 10 kn, Grguru 14 kn i Juri 5 kn
-
-/td [placa za sve] [tko sve prima]*n [količina]
-/td tvrtko karlo grgur jura 1000
-# (transaction division)
-# Tvrtko je platio rundu za sve (uključujući njega)
-
-/na [osoba] * n
+--Name add--
+Adds users to list.
+/na [user] * n
 /na tvrtko karlo jura
-# (name add)
-# dodaje n osoba na listu sa vrijednosti 0
 
-/nr [osoba]
+--Name remove--
+Removes user, only if balance = 0.
+/nr [user]
 /nr tvrtko
-# (name remove)
-# briše osobu sa listu ako ima vrijednost 0
 
-/nc [staro ime] [novo ime]
+--Name change--
+Changes username
+/nc [old username] [new username]
 /nc tvrtko tvrtkonator
-# (name change)
-# mijenja ime osobe
 
-/u
-# (undo)
-# vratit će stanje liste prije posljednje promjene
-# radi samo za komande koje utječu na listu za dugove(t, tm, na, nr, nc)
+--Group create--
+Creates group
+/gc [user] * n
+/gc party karlo tvrtko jura grgur
 
+--Group remove--
+Removes group
+/gr [group name]
+/gr party
+
+Group print
+Returns a list of groups
+/gp
+
+Transaction
+Make transaction
+/t [surplus user] ([deficit user] [amount]) * n
+/t tvrtko karlo 10
+/t tvrtko karlo 10 grgur 20 jura 15
+
+Transaction division
+Make transaction that divides deficit among all people listed (including surplus user).
+/td [surplus user] [deficit user] * n [amount]
+/td tvrtko karlo grgur jura 1000
+
+Transaction group
+Functions like Transaction division but with preselected users saved in a group.
+/tg [surplus user] [group name] [amount]
+/tg tvrtko party 500
+
+State force
+Allows user to set the state manually. Inbalance will be divided among users.
+/sf ([user] [balance]) * n
+/sf tvrtko 10 grgur 5 jura -5 karlo -10
+
+State
+Returns state
 /s
-# (state)
-# bot vrača trenutno stanje liste
 
+Undo
+Undoes last transaction (Only transactions).
+/u
+
+Random
+Returns random user from a list
 /r
-# (random)
-# bot vrača nasumično ime sa liste
 
+Custom command
+Returns output for custom command
+/[custom command]
+
+Custom commands list
+Returns list of custom commands
 /cl
-# (custom commands list)
-# lista custom komandi
 
-/cc [komanda] [izlaz]
-# (command create)
-# napravi custom komandu
+Command create
+Creates custom command
+/cc [command] [output]
 
-/cr [komanda]
-# (command remove)
-# izbriši custom komandu
+Command remove
+Removes custom command
+/cr [command]
 
-/[custom komanda]
-# bot vrača custom vrijednost
-
+Help
+Returns help message
 /h
-# (help)
+
+Command tips 'n' tricks:
+You can put math expresions as amount. 
+/t tvrtko karlo 5*7.53
+
+You can put '#' to comment your transaction.
+/t tvrtko karlo 20 #money for lunch
+
+Spaces, tabs and line breaks do not matter.
+/t tvtko   karlo 
+19       +17
+#lunch

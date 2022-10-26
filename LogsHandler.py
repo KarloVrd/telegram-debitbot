@@ -71,16 +71,19 @@ class LogsHandler:
     @classmethod
     def get_undo_last_command(cls, path):
         logs = cls.load_logs(path)
-        for i in range(len(logs) - 1, -1, -1):
-            log = logs[i].split(" ")
-            command = log[2].split("_")
-            if command[0] in ["/t", "/td", "/na", "/nr", "/nc"] and "UNDONE" not in log:
-                logs[i] += " UNDONE"
-                f = open(path, "w")
-                f.write("\n".join(logs) + "\n")
-                f.close()
+        last_log = logs[len(logs) - 1].split(" ")
 
-                return command
+        command = last_log[2].split("_")
+        if command[0] in ["t", "td", "tg"] and "UNDONE" not in last_log:
+            logs[len(logs) - 1] += " UNDONE"
+            f = open(path, "w")
+            f.write("\n".join(logs) + "\n")
+            f.close()
+
+            return command
+        
+        else:
+            return None
 
     @classmethod
     def clear_logs(cls):

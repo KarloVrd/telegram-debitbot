@@ -13,14 +13,6 @@ class DebitHandler:
             self.relative_path = paths.relativePath
         self.help_path = os.path.join(self.relative_path, "help.txt")
 
-        self.invers_commands = {
-            "t": self.transaction_inverse,
-            "td": self.division_transaction_inverse,
-            "na": self.add_name_inverse,
-            "nr": self.remove_name_inverse,
-            "nc": self.change_name_inverse,
-        }
-
         self.commands = {
             "t": self.transaction,
             "td": self.division_transaction,
@@ -34,7 +26,7 @@ class DebitHandler:
             "h": self.load_help_str,
             "sum": self.sum,
             "gc": self.group_create,
-            "gd": self.group_delete,
+            "gr": self.group_delete,
             "gp": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
@@ -58,9 +50,16 @@ class DebitHandler:
             return False
 
     @staticmethod
+    def contains_mixed_letters_and_non_letters(string):
+        return any(letter.isalpha() for letter in string) and any(
+            not letter.isalpha() for letter in string
+        )
+    
+    @staticmethod
     def resolvingAlgebraFormations(array: list) -> list:
             i = 0
             isLastNum: bool = False
+
             while (i < len(array)):
                 if DebitHandler.is_eng_str(array[i]) == False:
                     if isLastNum:
@@ -69,7 +68,6 @@ class DebitHandler:
                     else:
                         i += 1
                     isLastNum = True
-                
                 else:
                     if isLastNum == True:
                         array[i-1] = eval(array[i-1])
@@ -252,14 +250,23 @@ class DebitHandler:
         return ("State reset", 1)
 
     def force_state(self, args):
-        unbalance_tolerance = 3
-
         state_dict = dict()
         for i in range(0, len(args), 2):
-            state_dict[args[i].capitalize()] = float(args[i + 1])
+            if DebitHandler.is_eng_str(args[i]) == False:
+                return ("Name must contain letters only (Eng)", 0)
 
-        if abs(self.sum(state_dict)[0]) > unbalance_tolerance:
-            return ("State unbalanced", 0)
+            elif args[i].capitalize() in state_dict:
+                return ("Name repeated", 0)
+                
+            state_dict[args[i].capitalize()] = round(float(args[i + 1]), 2)
+
+        difference = sum(list(state_dict.values()))
+        differenceOfDifference = (100 * difference % len(state_dict)) / 100
+        
+        for i in state_dict:
+            state_dict[i] -= (100 * difference // len(state_dict)) / 100
+
+        state_dict[list(state_dict.keys())[0]] += differenceOfDifference
 
         self.save_state(state_dict)
         return ("Force state complete", 1)
@@ -334,10 +341,12 @@ class DebitHandler:
             path = self.data_path
 
         x = list()
-        sorted_keys = sorted(data, key=data.get)
         for key in data.keys():
-            value = data[key]
-            s = "{} {}".format(key.strip().capitalize(), str(round(float(value), 4)))
+
+            name = key.strip().capitalize()
+            value = str(round(float(data[key]), 2))
+
+            s = "{} {}".format(name, value)
             x.append(s)
         text = "\n".join(x)
 
@@ -456,11 +465,11 @@ class DebitHandler:
                 if i.capitalize() not in data:
                     return ("Name not on the list", 0)
 
-        money_per_person = money / (len(rec) + 1)
+        money_per_person = round(money / (len(rec) + 1), 2)
 
-        self.updata_value(don, money - money_per_person)
         for i in rec:
             self.updata_value(i.capitalize(), -1 * money_per_person)
+        self.updata_value(don, money_per_person * len(rec))
         return ("Transaction complete", 1)
 
     def transaction(self, args):
@@ -484,7 +493,7 @@ class DebitHandler:
         if len(recs) != len(amounts):
             return ("Invalid command", 0)
 
-        amounts = [float(x) for x in amounts]
+        amounts = [round(float(x), 2) for x in amounts]
 
         for i in range(len(recs)):
             self.updata_value(recs[i], -1 * amounts[i])
@@ -502,7 +511,7 @@ class DebitHandler:
         money = float(args[2])
 
         if don not in state:
-            return ("Name not on the list", 0)
+            return ("Name not on list", 0)
 
         groups = self.load_groups()
         if group_name not in groups:
@@ -511,7 +520,7 @@ class DebitHandler:
             rec = groups[group_name]
 
             if don not in rec:
-                return ("Name not in the group", 0)
+                return ("Name not in group", 0)
 
             rec.remove(don)
 
@@ -527,62 +536,18 @@ class DebitHandler:
         keys = list(data.keys())
         return (random.choice(keys), 0)
 
-    def division_transaction_inverse(self, args):
-        args = DebitHandler.resolvingAlgebraFormations(args)
-        don = args[0].capitalize()
-        rec = args[1:-1]
-        money = float(args[-1])
-        money_per_person = money / (len(rec) + 1)
-        if len(rec) == 1:
-            return "Cannot undo Groups command"
-        self.updata_value(don.capitalize(), -1 * money + money_per_person)
-        for i in rec:
-            self.updata_value(i.capitalize(), money_per_person)
-
-    def transaction_inverse(self, args):
-        args = DebitHandler.resolvingAlgebraFormations(args)
-        
-        don = args[0].capitalize()
-        recs = list(map(lambda x: x.capitalize(), args[1::2]))
-        amounts = list(map(lambda x: float(x), args[2::2]))
-
-        for i in range(len(recs)):
-            self.updata_value(recs[i], amounts[i])
-
-        self.updata_value(don, -1 * sum(amounts))
-
-        return ("Transaction complete", 1)
-
-    def add_name_inverse(self, args):
-        data = self.load_data()
-        for i in args:
-            del data[i.capitalize()]
-        self.save_state(data)
-
-    def remove_name_inverse(self, args):
-        data = self.load_data()
-        for i in args:
-            data[i.capitalize()] = 0
-        self.save_state(data)
-
-    def change_name_inverse(self, args):
-        data = self.load_data()
-        name = args[0].capitalize()
-        name_new = args[1].capitalize()
-        data[name] = data.pop(name_new)
-        self.save_state(data)
-
     def undo(self):
         path = os.path.join(self.relative_path, "Logs", str(self.id) + ".txt")
         command = LogsHandler.get_undo_last_command(path)
-        if str(command) == "None":
-            return ("Nothing to undo", 0)
+        if command == None:
+            return ("Only transactions can be undone", 0)
 
-        if command[2] == command[2].upper():
-            x = self.inverse_group_check(command)
-            if x != 0:
-                command = x
-        self.invers_commands[command[0][1:]](command[1:])
+        command = DebitHandler.resolvingAlgebraFormations(command)
+
+        command = DebitHandler.invertNumberSignFromArray(command)
+
+        self.commands[command[0]](command[1:])
+
         return ("Undone", 1)
 
     def sum(self, state=False):
@@ -602,7 +567,14 @@ class DebitHandler:
         self.save_state(state)
         return ("Currency converted",1)
 
+    @staticmethod
+    def invertNumberSignFromArray(args:list):
+        for i in args:
+            if DebitHandler.is_num(i):
+                args[args.index(i)] = str(float(i) * -1)
+
+        return args
 if __name__ == '__main__':
-    array = ['Transaction','3', '+','5', '-','4','-4', 'Karlo', 'Jura', "(4+90)",'/3','Gjuto',"-3"]
+    array = ['/Transaction','3', '+','5', '-','4','-4', '/Karlo', 'Jura', "(4+90)",'/3','Gjuto',"-3"]
     array = DebitHandler.resolvingAlgebraFormations(array)
     print("Array:",array)

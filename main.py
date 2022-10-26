@@ -99,9 +99,7 @@ class BotApi:
         self.new_offset = 0
 
     def process_updates(self, timeout=30):
-        #print("loading updates")
         all_updates = magnito_bot.get_updates(self.new_offset, timeout=timeout)
-        #print("updates loaded")
         if len(all_updates) > 0:
             for current_update in all_updates:
                 try:
@@ -117,15 +115,19 @@ class BotApi:
                             current_update["message"]["text"][1:]
                             .split("#")[0]
                             .replace("\n", " ")
+                            .replace("\r", " ")
+                            .replace("\t", " ")
+                            .replace("\xa0", " ")
                             .split(" ")
-                    
                         )
+                        update_text = [i for i in update_text if i != ""]
+                        current_update["message"]["text"] = " ".join(update_text)
+
                     else:
                         continue
 
-                    update_text = [i for i in update_text if i != ""]
+                    print(current_update["message"]["text"], update_text)
 
-                    print(update_text)
                     chat_id = current_update["message"]["chat"]["id"]
                     
                     if not security_check(current_update, chat_id):
@@ -146,16 +148,17 @@ class BotApi:
                         "id": current_update["message"]["chat"]["id"],
                         "title": title,
                     }
-
-                    # komande za sprdačinu
+                    
                     custom_commands = CC.load_custom_commands()
-                    if in_dict["comm"] in custom_commands:
-                        msg_out = custom_commands[in_dict["comm"]]
-                        LH.save_input(current_update)
 
                     # komande za dugove
-                    elif in_dict["comm"] in DH.commands:
+                    if in_dict["comm"] in DH.commands:
                         msg_out = DH.commands_API(in_dict)
+                        LH.save_input(current_update)
+
+                    # komande za sprdačinu
+                    elif in_dict["comm"] in custom_commands:
+                        msg_out = custom_commands[in_dict["comm"]]
                         LH.save_input(current_update)
 
                     # komande za upravljanje sprdačina
