@@ -24,10 +24,11 @@ class DebitHandler:
             "nc": self.change_name,
             "u": self.undo,
             "h": self.load_help_str,
+            "help" : self.load_help_str,
             "sum": self.sum,
             "gc": self.group_create,
             "gr": self.group_delete,
-            "gp": self.groups_print,
+            "gl": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
             "reset" : self.reset_state,
@@ -277,7 +278,6 @@ class DebitHandler:
     def fix_state_inbalance(state: dict) -> dict:
         difference = sum(list(state.values()))
         differenceOfDifference = (100 * difference % len(state)) / 100
-        print(difference, differenceOfDifference,state)
         for i in state:
             state[i] -= (100 * difference // len(state)) / 100
 

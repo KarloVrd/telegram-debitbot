@@ -1,95 +1,95 @@
---Name add--
+<b>Name Add</b>
 Adds users to list.
 /na [user] * n
 /na tvrtko karlo jura
 
---Name remove--
+<b>Name Remove</b>
 Removes user, only if balance = 0.
 /nr [user]
 /nr tvrtko
 
---Name change--
+<b>Name Change</b>
 Changes username
 /nc [old username] [new username]
 /nc tvrtko tvrtkonator
 
---Group create--
+<b>Group Create</b>
 Creates group
 /gc [user] * n
 /gc party karlo tvrtko jura grgur
 
---Group remove--
+<b>Group Remove</b>
 Removes group
 /gr [group name]
 /gr party
 
---Group print--
+<b>Group List</b>
 Returns a list of groups
-/gp
+/gl
 
---Transaction--
+<b>Transaction</b>
 Make transaction
 /t [surplus user] ([deficit user] [amount]) * n
 /t tvrtko karlo 10
 /t tvrtko karlo 10 grgur 20 jura 15
 
---Transaction division--
+<b>Transaction Division</b>
 Make transaction that divides deficit among all people listed (including surplus user).
 /td [surplus user] [deficit user] * n [amount]
 /td tvrtko karlo grgur jura 1000
 
---Transaction group--
+<b>Transaction Group</b>
 Functions like Transaction division but with preselected users saved in a group.
 /tg [surplus user] [group name] [amount]
 /tg tvrtko party 500
 
---State force--
+<b>State Force</b>
 Allows user to set the state manually. Inbalance will be divided among users.
 /sf ([user] [balance]) * n
 /sf tvrtko 10 grgur 5 jura -5 karlo -10
 
---State--
+<b>State</b>
 Returns state
 /s
 
---Undo--
+<b>Undo</b>
 Undoes last transaction (Only transactions).
 /u
 
---Random--
+<b>Random</b>
 Returns random user from a list
 /r
 
---Reset--
+<b>Reset</b>
 Resets every state to 0
 /reset
 
---Convert currency--
+<b>Currency Convert</b>
 Multiplies state by provided number.
 /currencyconvert [number]
 /currencyconvert 7.53
 
---Custom command--
+<b>Custom command</b>
 Returns output for custom command
 /[custom command]
 
---Custom commands list--
+<b>Custom Commands List</b>
 Returns list of custom commands
 /cl
 
---Command create--
+<b>Command Create</b>
 Creates custom command
 /cc [command] [output]
 
---Command remove--
+<b>Command Remove</b>
 Removes custom command
 /cr [command]
 
---Help--
+<b>Help</b>
 Returns help message
 /h
 
---Command tips 'n' tricks--
+<b>Command Tips 'n' Tricks</b>
 You can put math expresions as amount. 
 /t tvrtko karlo 5*7.53
 

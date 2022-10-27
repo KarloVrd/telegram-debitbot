@@ -11,16 +11,13 @@ from LogsHandler import LogsHandler
 class BotHandler:
     def __init__(self, token):
         self.token = token
-        self.api_url = "https://api.telegram.org/bot{}/".format(token)
-
-    # url = "https://api.telegram.org/bot1647743462:AAFcjy2b-PhRiYN2z9dkMhTwNgEfD3mPreY/getUpdates"
+        self.api_url = f"https://api.telegram.org/bot{token}/"
 
     def get_updates(self, offset=0, timeout=30, verify=False):  # 30
         method = "getUpdates"
         params = {"timeout": timeout, "offset": offset}
         resp = requests.get(self.api_url + method, params)
         result_json = resp.json()["result"]
-        print(result_json)
         return result_json
 
     def send_message(self, chat_id, text):
@@ -35,39 +32,13 @@ class BotHandler:
         resp = requests.post(self.api_url + method, params)
         return resp
 
-    def get_first_update(self):
-        get_result = self.get_updates()
-
-        if len(get_result) > 0:
-            last_update = get_result[0]
-        else:
-            last_update = None
-
-        return last_update
-
-    def get_chat_history(self):
-        pass
-
-
-token = "1647743462:AAFcjy2b-PhRiYN2z9dkMhTwNgEfD3mPreY"  # Token of your bot
-magnito_bot = BotHandler(token)  # Your bot's name
-
-
-def security_check(update_, offset):
-
-    return True
-    secure_ids = [1217535067]
-    secure_group_ids = [-518192732, -1001172051071, -568705610]
-    if update_["message"]["chat"]["type"] == "private":
-        if update_["message"]["from"]["id"] not in secure_ids:
-            prijeteca_poruka(offset)
-            return False
-    else:
-        if update_["message"]["chat"]["id"] not in secure_group_ids:
-            prijeteca_poruka_grupa(offset)
-            return False
+def security_check(update):
     return True
 
+    secure_chat_ids = [1217535067, -518192732, -1001172051071, -568705610]
+    if update["message"]["chat"]["id"] in secure_chat_ids:
+        return True
+    return False
 
 def prijeteca_poruka(num):
     poruke = [
@@ -80,18 +51,49 @@ def prijeteca_poruka(num):
         magnito_bot.send_message(num, i)
         time.sleep(2)
 
-
 def prijeteca_poruka_grupa(offset):
     poruke = ["Hehe...", "Dobar pokusaj...", "Seto jedno...",]
     for i in poruke:
         magnito_bot.send_message(offset, i)
         time.sleep(2)
 
+def get_user_name(current_update):
+    if "username" in current_update["message"]["from"]:
+        user = current_update["message"]["from"]["username"]
+    elif "first_name" in current_update["message"]["from"] and "last_name" in current_update["message"]["from"]:
+        first_name = current_update["message"]["from"]["first_name"]
+        last_name = current_update["message"]["from"]["last_name"]
+        user = f"{first_name} {last_name}"
+    elif "first_name" in current_update["message"]["from"]:
+        user = current_update["message"]["from"]["first_name"]
+    else:
+        return None
+    return user
+
+def show(current_update):
+    if "message" not in current_update:
+        print("Missing message")
+        return
+
+    user = get_user_name(current_update)
+    chat_id = current_update["message"]["chat"]["id"]
+    text = current_update["message"]["text"]
+
+    print(f"{chat_id}: {user} - {text}")
+
+def filter_update(update):
+    if "message" not in update or "text" not in update["message"] or update["message"]["text"][0] != "/":
+        return False
+
+    return True
+
+token = "1647743462:AAFcjy2b-PhRiYN2z9dkMhTwNgEfD3mPreY"  # Token of your bot
+magnito_bot = BotHandler(token)  # Your bot's name
+testerId = 1217535067
 
 DH = DebitHandler()
 CC = CCHandler()
 LH = LogsHandler()
-testerId = 1217535067
 print("Start")
 
 
@@ -101,87 +103,81 @@ class BotApi:
 
     def process_updates(self, timeout=30, testMode=False):
         all_updates = magnito_bot.get_updates(self.new_offset, timeout=timeout)
-        if len(all_updates) > 0:
-            for current_update in all_updates:
-                try:
-                    current_update_id = current_update["update_id"]
-                    self.new_offset = current_update_id + 1
 
-                    if "message" not in current_update:
+        if len(all_updates) == 0:
+            return False
+
+        for current_update in all_updates:
+            try:
+                show(current_update)
+
+                current_update_id = current_update["update_id"]
+                self.new_offset = current_update_id + 1
+
+                if filter_update(current_update) == False:
+                    continue
+                
+                chat_id = current_update["message"]["chat"]["id"]
+                message_id = current_update["message"]["message_id"]
+
+                if testMode:
+                    if current_update["message"]["from"]["id"] != testerId:
+                        msg_out = "Bot has better things to do. Try again later."
+                        magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = message_id)
                         continue
 
-                    if "text" in current_update["message"] and current_update["message"]["text"][0] == "/":
-                        if testMode:
-                            # tesing if the sender is tester
-                            if current_update["message"]["from"]["id"] != testerId:
-                                msg_out = "Bot has better things to do. Try again later."
-                                magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
-                                continue
+                update_text = (
+                    current_update["message"]["text"][1:]
+                    .split("#")[0]
+                    .replace("\n", " ")
+                    .replace("\r", " ")
+                    .replace("\t", " ")
+                    .replace("\xa0", " ")
+                    .split(" ")
+                )
+                
+                update_text = [i for i in update_text if i != ""]
+                current_update["message"]["text"] = " ".join(update_text)
 
-                        update_text = (
-                            current_update["message"]["text"][1:]
-                            .split("#")[0]
-                            .replace("\n", " ")
-                            .replace("\r", " ")
-                            .replace("\t", " ")
-                            .replace("\xa0", " ")
-                            .split(" ")
-                        )
-                        update_text = [i for i in update_text if i != ""]
-                        current_update["message"]["text"] = " ".join(update_text)
+                if "title" in current_update["message"]["chat"]:
+                    title = current_update["message"]["chat"]["title"].replace(" ", "_")
+                else:
+                    title = get_user_name(current_update)
 
-                    else:
-                        continue
+                in_dict = {
+                    "comm": update_text[0].lower(),
+                    "args": update_text[1:],
+                    "id": current_update["message"]["chat"]["id"],
+                    "title": title,
+                }
+            
+                custom_commands = CC.load_custom_commands()
 
-                    chat_id = current_update["message"]["chat"]["id"]
-                    
-                    if not security_check(current_update, chat_id):
-                        continue
+                # komande za dugove
+                if in_dict["comm"] in DH.commands:
+                    msg_out = DH.commands_API(in_dict)
+                    LH.save_input(current_update)
 
-                    # dictionery za input
-                    # ime razgovora ili osobe
-                    if "title" in current_update["message"]["chat"]:
-                        title = current_update["message"]["chat"]["title"].replace(
-                            " ", "_"
-                        )
-                    else:
-                        title = current_update["message"]["from"]["first_name"]
+                # komande za sprdačinu
+                elif in_dict["comm"] in custom_commands:
+                    msg_out = custom_commands[in_dict["comm"]]
+                    LH.save_input(current_update)
 
-                    in_dict = {
-                        "comm": update_text[0].lower(),
-                        "args": update_text[1:],
-                        "id": current_update["message"]["chat"]["id"],
-                        "title": title,
-                    }
-                    
-                    custom_commands = CC.load_custom_commands()
+                # komande za upravljanje sprdačina
+                elif in_dict["comm"] in CC.commands:
+                    msg_out = CC.commands_API(in_dict)
+                    LH.save_input(current_update)
 
-                    # komande za dugove
-                    if in_dict["comm"] in DH.commands:
-                        msg_out = DH.commands_API(in_dict)
-                        LH.save_input(current_update)
+                else:
+                    msg_out = "Unknown command"
 
-                    # komande za sprdačinu
-                    elif in_dict["comm"] in custom_commands:
-                        msg_out = custom_commands[in_dict["comm"]]
-                        LH.save_input(current_update)
+            except Exception as e:  #    ERROR
+                print(e)
+                traceback.print_exc()
 
-                    # komande za upravljanje sprdačina
-                    elif in_dict["comm"] in CC.commands:
-                        msg_out = CC.commands_API(in_dict)
-                        LH.save_input(current_update)
+                msg_out = "Invalid command"
 
-                    # nije pronađena nijedna komanda
-                    else:
-                        msg_out = "Unknown command"
-
-                except Exception as e:  #    ERROR
-                    print(e)
-                    traceback.print_exc()
-
-                    msg_out = "Invalid command"
-
-                magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
+            magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
 
         return True
     
