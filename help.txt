@@ -60,6 +60,15 @@ Undoes last transaction (Only transactions).
 Returns random user from a list
 /r
 
+--Reset--
+Resets every state to 0
+/reset
+
+--Convert currency--
+Multiplies state by provided number.
+/currencyconvert [number]
+/currencyconvert 7.53
+
 --Custom command--
 Returns output for custom command
 /[custom command]

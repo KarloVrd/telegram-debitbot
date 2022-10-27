@@ -30,6 +30,7 @@ class DebitHandler:
             "gp": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
+            "reset" : self.reset_state,
             "currencyconvert": self.currencyConvert,
         }
 
@@ -101,6 +102,9 @@ class DebitHandler:
         return ("Group created", 0)
 
     def save_groups(self, groups):
+        if DebitHandler.sum(groups) != 0:
+            return False
+
         groups_list = list()
         for i in groups:
             groups_list.append(i + "-" + " ".join(groups[i]))
@@ -108,7 +112,7 @@ class DebitHandler:
         end_str = "\n".join(groups_list)
         f.write(end_str)
         f.close()
-        return
+        return True
 
     def group_delete(self, args):
         key_word = args[0].upper()
@@ -250,26 +254,36 @@ class DebitHandler:
         return ("State reset", 1)
 
     def force_state(self, args):
-        state_dict = dict()
+        state = dict()
         for i in range(0, len(args), 2):
             if DebitHandler.is_eng_str(args[i]) == False:
                 return ("Name must contain letters only (Eng)", 0)
 
-            elif args[i].capitalize() in state_dict:
+            elif args[i].capitalize() in state:
                 return ("Name repeated", 0)
                 
-            state_dict[args[i].capitalize()] = round(float(args[i + 1]), 2)
+            state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
-        difference = sum(list(state_dict.values()))
-        differenceOfDifference = (100 * difference % len(state_dict)) / 100
+        if self.sum(state) != 0:
+            state = DebitHandler.fix_state_inbalance(state)
+
+        if self.save_state(state):
+            return ("Force state complete", 1)
+        else:
+            return ("Error; sum not 0", 0)
         
-        for i in state_dict:
-            state_dict[i] -= (100 * difference // len(state_dict)) / 100
+    # state is better name for group state
+    @staticmethod
+    def fix_state_inbalance(state: dict) -> dict:
+        difference = sum(list(state.values()))
+        differenceOfDifference = (100 * difference % len(state)) / 100
+        print(difference, differenceOfDifference,state)
+        for i in state:
+            state[i] -= (100 * difference // len(state)) / 100
 
-        state_dict[list(state_dict.keys())[0]] += differenceOfDifference
-
-        self.save_state(state_dict)
-        return ("Force state complete", 1)
+        state[list(state.keys())[0]] -= differenceOfDifference
+    
+        return state
 
     def commands_API(self, in_dict):
         # return (0,0)
@@ -524,11 +538,11 @@ class DebitHandler:
 
             rec.remove(don)
 
-        money_per_person = money / (len(rec) + 1)
+        money_per_person = round(money / (len(rec) + 1),2)
 
-        self.updata_value(don, money - money_per_person)
         for i in rec:
             self.updata_value(i.capitalize(), -1 * money_per_person)
+        self.updata_value(don, money_per_person * len(rec))
         return ("Transaction complete", 1)
 
     def random_name(self):
@@ -558,14 +572,17 @@ class DebitHandler:
         return (round(sum(L), 4), 0)
 
     def currencyConvert(self, args:list):
-        multiplier: float = float(args[0])
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        multiplier: float = round(float(args[0]), 2)
         state = self.load_data()
         name: str
         for name in state.keys():
             state[name] = float(state[name]) * multiplier
 
-        self.save_state(state)
-        return ("Currency converted",1)
+        if self.save_state(state):
+            return ("Currency converted",1)
+        else:
+            return ("Error; sum not 0", 0)
 
     @staticmethod
     def invertNumberSignFromArray(args:list):

@@ -91,6 +91,7 @@ def prijeteca_poruka_grupa(offset):
 DH = DebitHandler()
 CC = CCHandler()
 LH = LogsHandler()
+testerId = 1217535067
 print("Start")
 
 
@@ -98,12 +99,11 @@ class BotApi:
     def __init__(self):
         self.new_offset = 0
 
-    def process_updates(self, timeout=30):
+    def process_updates(self, timeout=30, testMode=False):
         all_updates = magnito_bot.get_updates(self.new_offset, timeout=timeout)
         if len(all_updates) > 0:
             for current_update in all_updates:
                 try:
-                    
                     current_update_id = current_update["update_id"]
                     self.new_offset = current_update_id + 1
 
@@ -111,6 +111,13 @@ class BotApi:
                         continue
 
                     if "text" in current_update["message"] and current_update["message"]["text"][0] == "/":
+                        if testMode:
+                            # tesing if the sender is tester
+                            if current_update["message"]["from"]["id"] != testerId:
+                                msg_out = "Bot has better things to do. Try again later."
+                                magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
+                                continue
+
                         update_text = (
                             current_update["message"]["text"][1:]
                             .split("#")[0]
@@ -125,8 +132,6 @@ class BotApi:
 
                     else:
                         continue
-
-                    print(current_update["message"]["text"], update_text)
 
                     chat_id = current_update["message"]["chat"]["id"]
                     
@@ -187,6 +192,6 @@ if __name__ == "__main__":
     try:
         ap = BotApi()
         while True:
-            ap.process_updates(timeout = 30)
+            ap.process_updates(timeout = 30 , testMode=True)
     except KeyboardInterrupt:
         exit()
