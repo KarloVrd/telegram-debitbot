@@ -265,11 +265,16 @@ class DebitHandler:
                 
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
+        inbalance_fixed = False
         if self.sum(state) != 0:
             state = DebitHandler.fix_state_inbalance(state)
+            inbalance_fixed = True
 
         if self.save_state(state):
-            return ("Force state complete", 1)
+            if inbalance_fixed:
+                return ("State forced, inbalance fixed", 1)
+            else:
+                return ("Force state complete", 1)
         else:
             return ("Error; sum not 0", 0)
         
@@ -277,11 +282,12 @@ class DebitHandler:
     @staticmethod
     def fix_state_inbalance(state: dict) -> dict:
         difference = sum(list(state.values()))
-        differenceOfDifference = (100 * difference % len(state)) / 100
+        remainder = (100 * difference % len(state)) / 100
         for i in state:
             state[i] -= (100 * difference // len(state)) / 100
 
-        state[list(state.keys())[0]] -= differenceOfDifference
+        for i in range(0, int(remainder * 100)):
+            state[list(state.keys())[i]] -= 0.01
     
         return state
 
