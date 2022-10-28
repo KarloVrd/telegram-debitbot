@@ -71,7 +71,7 @@ def get_user_name(current_update):
     return user
 
 def show(current_update):
-    if "message" not in current_update:
+    if "message" not in current_update or "text" not in current_update["message"]:
         print("Missing message")
         return
 
@@ -116,7 +116,7 @@ class BotApi:
 
                 if filter_update(current_update) == False:
                     continue
-                
+
                 chat_id = current_update["message"]["chat"]["id"]
                 message_id = current_update["message"]["message_id"]
 
@@ -170,14 +170,15 @@ class BotApi:
 
                 else:
                     msg_out = "Unknown command"
+                
+                magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
 
-            except Exception as e:  #    ERROR
+            except FileExistsError as e:  #    ERROR
                 print(e)
                 traceback.print_exc()
 
                 msg_out = "Invalid command"
-
-            magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
+                magnito_bot.reply_to_message(chat_id = chat_id, text = msg_out, message_id = current_update["message"]["message_id"])
 
         return True
     
