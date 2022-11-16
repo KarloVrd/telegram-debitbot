@@ -3,14 +3,14 @@ import os
 import random
 import glob
 from sys import platform
-import paths
+import CONFIG
 
 class DebitHandler:
     def __init__(self):
         if platform == "win32":
             self.relative_path = os.path.dirname(__file__)
         else:
-            self.relative_path = paths.relativePath
+            self.relative_path = CONFIG.relativePath
         self.help_path = os.path.join(self.relative_path, "help.txt")
 
         self.commands = {

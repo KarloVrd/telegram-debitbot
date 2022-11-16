@@ -11,5 +11,5 @@ Zoran 55.69
 Tonka 74.51
 Jura 78.72
 Grgicin 102.24
-Vlatko 108.28
-Tomas 521.05
+Vlatko -391.72
+Tomas 1021.05
