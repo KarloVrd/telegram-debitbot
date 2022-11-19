@@ -1,15 +1,21 @@
 # -*- coding: UTF8 -*-
 import traceback
 import requests
+import json
+import os
+import sys
 
 from DebitHandler import DebitHandler
 from CustomCommandsHandler import CCHandler
 from LogsHandler import LogsHandler
-import CONFIG
 
-TOKEN = CONFIG.TOKEN
+here = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(here, "./vendored"))
+
+TOKEN = os.environ["TELEGRAM_TOKEN"]
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
-testerId = CONFIG.testerId
+
+testerId = 1217535067
 
 DH = DebitHandler()
 CC = CCHandler()
@@ -64,6 +70,11 @@ def filter_update(update):
         return True
 
     return False
+
+def aws_lambda_handler(event, context):
+    update = json.loads(event["body"])
+    process_event(update)
+    return {"statusCode": 200}
 
 # for AWS Lambda to work, needs one function to be called
 def process_event(event, testMode=False):
@@ -127,9 +138,9 @@ def process_event(event, testMode=False):
         
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
-    except FileExistsError as e:  #    ERROR
-        print(e)
-        traceback.print_exc()
+    except:  #    ERROR
+        if testMode:
+            traceback.format_exc()
 
         msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
@@ -146,7 +157,9 @@ class BotApi:
             return False
 
         for current_update in all_updates:
-            show(current_update)
+            if testMode:
+                show(current_update)
+
             process_event(current_update, testMode=testMode)
             current_update_id = current_update["update_id"]
             self.new_offset = current_update_id + 1

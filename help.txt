@@ -15,7 +15,7 @@ Changes username
 
 <b>Group Create</b>
 Creates group
-/gc [user] * n
+/gc [group name] [user] * n
 /gc party karlo tvrtko jura grgur
 
 <b>Group Remove</b>

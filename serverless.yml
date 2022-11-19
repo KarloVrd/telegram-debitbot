@@ -1,0 +1,25 @@
+service: debit-bot-test
+
+provider:
+  name: aws
+  runtime: python3.9
+  stage: dev
+  region: eu-central-1
+  environment:
+    TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+
+
+
+functions:
+  post:
+    handler: main.aws_lambda_handler
+    events:
+      - http:
+          path: my-custom-url
+          method: post
+          cors: true
+
+Statement:
+  Action:
+    - lambda:InvokeFunction
+    - lambda:InvokeFunctionConfiguration

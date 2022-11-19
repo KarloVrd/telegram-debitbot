@@ -1,14 +1,8 @@
 import os
 import time
-from sys import platform
-import CONFIG
-
 
 class LogsHandler:
-    if platform == "win32":
-        relative_path = os.path.dirname(__file__)
-    else:
-        relative_path = CONFIG.relativePath
+    relative_path = os.getcwd()
 
     @classmethod
     def save_input(cls, current_update):
