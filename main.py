@@ -2,15 +2,11 @@
 import traceback
 import requests
 import json
-import os
-import sys
+import os, sys
 
 from DebitHandler import DebitHandler
 from CustomCommandsHandler import CCHandler
 from LogsHandler import LogsHandler
-
-here = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(here, "./vendored"))
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
@@ -72,7 +68,9 @@ def filter_update(update):
     return False
 
 def aws_lambda_handler(event, context):
-    update = json.loads(event["body"])
+    if isinstance(event, str):
+        event = json.loads(event)
+    update = event["body"]
     process_event(update)
     return {"statusCode": 200}
 
@@ -117,7 +115,8 @@ def process_event(event, testMode=False):
         }
     
         custom_commands = CC.load_custom_commands()
-
+        if in_dict["comm"] > 3:
+            pass
         # debit commands
         if in_dict["comm"] in DH.commands:
             msg_out = DH.commands_API(in_dict)
@@ -138,11 +137,15 @@ def process_event(event, testMode=False):
         
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
-    except:  #    ERROR
+    except Exception as e:  #    ERROR
         if testMode:
-            traceback.format_exc()
-
+            pass
+            #traceback.format_exc()
         msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
+        msg_out = traceback.format_exc()
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        msg_out = exc_tb.tb_lineno
+        
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
 
@@ -159,7 +162,7 @@ class BotApi:
         for current_update in all_updates:
             if testMode:
                 show(current_update)
-
+            print(current_update)
             process_event(current_update, testMode=testMode)
             current_update_id = current_update["update_id"]
             self.new_offset = current_update_id + 1
@@ -168,6 +171,7 @@ class BotApi:
 
 if __name__ == "__main__":
     try:
+        send_message(testerId, "Bot started")
         ap = BotApi()
         print("Start")
         while True:

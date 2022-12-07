@@ -18,8 +18,3 @@ functions:
           path: my-custom-url
           method: post
           cors: true
-
-Statement:
-  Action:
-    - lambda:InvokeFunction
-    - lambda:InvokeFunctionConfiguration

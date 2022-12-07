@@ -6,8 +6,8 @@ from sys import platform
 
 class DebitHandler:
     def __init__(self):
-        self.relative_path = os.getcwd()
-        self.help_path = os.path.join(self.relative_path, "help.txt")
+        self.relative_path = os.environ["WRITING_ROOT"]
+        self.help_path = os.path.join(os.getcwd(), "help.txt")
 
         self.commands = {
             "t": self.transaction,
@@ -88,7 +88,6 @@ class DebitHandler:
         if key_word in groups:
             return ("Group already exists", 0)
         else:
-            memebers = list(set(members))
             for i in members:
                 if i not in state:
                     return ("Member name nonexisting", 0)
@@ -99,9 +98,6 @@ class DebitHandler:
         return ("Group created", 0)
 
     def save_groups(self, groups):
-        if DebitHandler.sum(groups) != 0:
-            return False
-
         groups_list = list()
         for i in groups:
             groups_list.append(i + "-" + " ".join(groups[i]))

@@ -176,7 +176,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/debit-bot-test/dev/1668645355076-2022-11-17T00:35:55.076Z/debit-bot-test.zip"
+                "S3Key": "serverless/debit-bot-test/dev/1668877079779-2022-11-19T16:57:59.779Z/debit-bot-test.zip"
               },
               "Handler": "main.aws_lambda_handler",
               "Runtime": "python3.9",
@@ -199,14 +199,14 @@
               "PostLogGroup"
             ]
           },
-          "PostLambdaVersioncEuevKHYWubFk4vgsTbKu5liTrPdKytGZRqyKv2E": {
+          "PostLambdaVersionLIrgDEzmT5gVf8FfzuJZgI2oZbGxI3DMTlNPYzN5Kg": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "PostLambdaFunction"
               },
-              "CodeSha256": "j1jP/tN7220PXsiiPZfpMaoqivb2qSPCPck27x2Nc7M="
+              "CodeSha256": "lYtzRl+lntVGoP9q1CSHb9w2AO6rCs7oQyhU4p5v5mI="
             }
           },
           "ApiGatewayRestApi": {
@@ -327,7 +327,7 @@
               "PostLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1668645354149": {
+          "ApiGatewayDeployment1668877078842": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -390,7 +390,7 @@
           "PostLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "PostLambdaVersioncEuevKHYWubFk4vgsTbKu5liTrPdKytGZRqyKv2E"
+              "Ref": "PostLambdaVersionLIrgDEzmT5gVf8FfzuJZgI2oZbGxI3DMTlNPYzN5Kg"
             },
             "Export": {
               "Name": "sls-debit-bot-test-dev-PostLambdaFunctionQualifiedArn"
@@ -544,7 +544,7 @@
         "timeout": 6,
         "runtime": "python3.9",
         "vpc": {},
-        "versionLogicalId": "PostLambdaVersioncEuevKHYWubFk4vgsTbKu5liTrPdKytGZRqyKv2E"
+        "versionLogicalId": "PostLambdaVersionLIrgDEzmT5gVf8FfzuJZgI2oZbGxI3DMTlNPYzN5Kg"
       }
     },
     "configValidationMode": "warn",
@@ -557,17 +557,19 @@
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
       },
-      "Action": [
-        "lambda:InvokeFunction",
-        "lambda:InvokeFunctionConfiguration"
-      ]
+      "Statement": {
+        "Action": [
+          "lambda:InvokeFunction",
+          "lambda:InvokeFunctionConfiguration"
+        ]
+      }
     },
     "layers": {},
     "isDashboardMonitoringPreconfigured": false,
     "artifact": "G:\\My Drive\\Programi\\Telegram bots\\OmegaDebitBot\\v2\\v2.4-GIT\\.serverless\\debit-bot-test.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/debit-bot-test/dev/1668645355076-2022-11-17T00:35:55.076Z",
+    "artifactDirectoryName": "serverless/debit-bot-test/dev/1668877079779-2022-11-19T16:57:59.779Z",
     "artifact": "debit-bot-test.zip"
   }
 }

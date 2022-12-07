@@ -2,7 +2,7 @@ import os
 import time
 
 class LogsHandler:
-    relative_path = os.getcwd()
+    relative_path = os.environ["WRITING_ROOT"]
 
     @classmethod
     def save_input(cls, current_update):
