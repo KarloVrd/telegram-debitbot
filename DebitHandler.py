@@ -27,8 +27,8 @@ class DebitHandler:
             "gl": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
+            "sm": self.currencyConvert, #state multiply
             "reset" : self.reset_state,
-            "currencyconvert": self.currencyConvert,
         }
 
     @staticmethod
@@ -191,7 +191,6 @@ class DebitHandler:
             return 0
 
     def state_transfer(self, args):
-        # return (0,0)
         dest_group_name = args[0]
         valid, res = self.find_dest_group_path(dest_group_name)
         if valid is True:
@@ -578,7 +577,7 @@ class DebitHandler:
             state[name] = float(state[name]) * multiplier
 
         if self.save_state(state):
-            return ("Currency converted",1)
+            return ("State multiplied", 1)
         else:
             return ("Error; sum not 0", 0)
 
