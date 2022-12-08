@@ -2,7 +2,9 @@ from LogsHandler import LogsHandler
 import os
 import random
 import glob
-from sys import platform
+import abc
+
+
 
 class DebitHandler:
     def __init__(self):
@@ -27,10 +29,65 @@ class DebitHandler:
             "gl": self.groups_print,
             "st": self.state_transfer,
             "sf": self.force_state,
-            "sm": self.currencyConvert, #state multiply
+            "sm": self.state_multiply, #state multiply
             "reset" : self.reset_state,
+            "sr" : self.reset_state,
         }
 
+    class unknown_username_exception(Exception):
+        def __init__(self, name):
+            self.message = "Unknown name"
+            self.name = name
+
+        def __str__(self):
+            return f"{self.message}: {self.name}"
+
+    class unknown_group_exception(Exception):
+        def __init__(self, group):
+            self.message = "Unknown group"
+            self.group = group
+
+        def __str__(self):
+            return f"{self.message}: {self.group}"
+
+    class invalid_arguments_exception(Exception):
+        def __init__(self, message, command):
+            self.message = message
+            self.command = command
+
+        def __str__(self):
+            return f"{self.message}: {self.command}"
+
+    class duplicate_name_exception(Exception):
+        def __init__(self, name = ""):
+            self.message = "Duplicate name"
+            self.name = name
+
+        def __str__(self):
+            return f"{self.message}: {self.name}"
+
+    class data_missing_exception(Exception):
+        def __init__(self, message = "Empty :("):
+            self.message = message
+
+        def __str__(self):
+            return f"{self.message}"
+    
+    class invalid_command_format_exception(Exception):
+        def __init__(self, message = "Invalid command", command = "h"):
+            self.message = message
+            self.command = command
+
+        def __str__(self):
+            return f"{self.message}"
+    
+    class forbidden_action_exception(Exception):
+        def __init__(self, message = "Forbidden request"):
+            self.message = message
+
+        def __str__(self):
+            return f"{self.message}"
+    
     @staticmethod
     def is_num(x):
         try:
@@ -55,42 +112,39 @@ class DebitHandler:
     
     @staticmethod
     def resolvingAlgebraFormations(array: list) -> list:
-            i = 0
-            isLastNum: bool = False
+        i = 0
+        isLastNum: bool = False
 
-            while (i < len(array)):
-                if DebitHandler.is_eng_str(array[i]) == False:
-                    if isLastNum:
-                        array[i - 1] = array[i - 1] + array[i]
-                        array.pop(i)
-                    else:
-                        i += 1
-                    isLastNum = True
+        while (i < len(array)):
+            if DebitHandler.is_eng_str(array[i]) == False:
+                if isLastNum:
+                    array[i - 1] = array[i - 1] + array[i]
+                    array.pop(i)
                 else:
-                    if isLastNum == True:
-                        array[i-1] = eval(array[i-1])
-                    isLastNum = False
                     i += 1
+                isLastNum = True
+            else:
+                if isLastNum == True:
+                    array[i-1] = eval(array[i-1])
+                isLastNum = False
+                i += 1
 
-            if isLastNum == True:
-                array[-1] = eval(array[-1])
+        if isLastNum == True:
+            array[-1] = eval(array[-1])
 
-            return array
-        # except:
-        #     return NULL
+        return array
 
     def group_create(self, args):
         state = self.load_data()
         key_word = args[0].upper()
         members = list(map(lambda x: x.capitalize(), args[1:]))
-
         groups = self.load_groups()
         if key_word in groups:
-            return ("Group already exists", 0)
+            raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
         else:
             for i in members:
                 if i not in state:
-                    return ("Member name nonexisting", 0)
+                    raise DebitHandler.unknown_username_exception(i)
 
             groups[key_word] = members
 
@@ -109,13 +163,12 @@ class DebitHandler:
 
     def group_delete(self, args):
         key_word = args[0].upper()
-        members = list(map(lambda x: x.capitalize(), args[1:]))
 
         groups = self.load_groups()
         if key_word not in groups:
-            return ("Group nonexistent", 0)
-        else:
-            del groups[key_word]
+            raise DebitHandler.unknown_username_exception(key_word)
+
+        del groups[key_word]
 
         self.save_groups(groups)
         return ("Group deleted", 0)
@@ -127,42 +180,26 @@ class DebitHandler:
         for i in groups:
             end_list.append("{} - {}".format(i, ", ".join(groups[i])))
 
+        if len(end_list) == 0:
+            raise DebitHandler.data_missing_exception()
+
         return ("\n".join(end_list), 0)
 
     def load_groups(self):
         try:
-            f = open(self.groups_path, "r")
+            with open(self.groups_path, "r") as f:
+                text = f.readlines()
 
         except:  # ako ne postoji, napravi file i vrati prazni dict
-            f = open(self.groups_path, "a")
+            with open(self.groups_path, "a") as f:
+                pass
             return dict()
 
-        text = f.readlines()
-        f.close()
         groups = dict()
         for i in text:
             x = i.strip().split("-")
             groups[x[0]] = x[1].split(" ")
         return groups
-
-    def groups_check(self, args):
-        don = args[0].capitalize()
-        key_word = args[1].upper()
-        groups = self.load_groups()
-
-        if key_word not in groups:
-            return "Group nonexisting"
-        else:
-            if don not in groups[key_word]:
-                return "Name not in group"
-            else:
-                members = groups[key_word]
-
-        members.remove(args[0].capitalize())
-        args.remove(args[1])
-        for i in members:
-            args.insert(-1, i)
-        return args
 
     def name_change_groups_fix(self, old_name, new_name):
         groups = self.load_groups()
@@ -175,28 +212,9 @@ class DebitHandler:
         self.save_groups(groups)
         return True
 
-    def inverse_group_check(self, command):
-        key_word = command[2]
-        groups = self.load_groups()
-        don = command[1].capitalize()
-        if key_word in groups:
-
-            members = groups[key_word]
-            members.remove(don)
-            command.remove(command[2])
-            for i in members:
-                command.insert(2, i)
-            return command
-        else:
-            return 0
-
     def state_transfer(self, args):
         dest_group_name = args[0]
-        valid, res = self.find_dest_group_path(dest_group_name)
-        if valid is True:
-            dest_group_path = res
-        else:
-            return (res, 0)
+        dest_group_path = self.find_dest_group_path(dest_group_name)
 
         dest_group_state = self.load_data(dest_group_path)
         state = self.load_data()
@@ -205,11 +223,11 @@ class DebitHandler:
         transfer_state = dict()
         for i in members:  #  A-ante B-bruno
             i = i.split("-")
-            if (
-                i[0].capitalize() not in state
-                or i[1].capitalize() not in dest_group_state
-            ):
-                return ("Name nonexisting", 0)
+            if (i[0].capitalize() not in state):
+                raise DebitHandler.unknown_username_exception(i[0])
+
+            elif i[1].capitalize() not in dest_group_state:
+                raise DebitHandler.unknown_username_exception(i[1])
 
             transfer_state[i[1].capitalize()] = state[i[0].capitalize()]
         # transfer_state = {<dest ime> : <stara vrijednost>}
@@ -229,10 +247,10 @@ class DebitHandler:
         path = os.path.join(self.relative_path, dirname_[0])
 
         if len(dirname_) > 1:
-            return False, "More groups under same name"
+            raise DebitHandler.duplicate_name_exception("Multiple groups with same name", name)
 
         elif len(dirname_) == 0:
-            return False, "Group name nonexisting"
+            raise DebitHandler.unknown_group_exception(name)
 
         else:
             return True, path
@@ -249,10 +267,10 @@ class DebitHandler:
         state = dict()
         for i in range(0, len(args), 2):
             if DebitHandler.is_eng_str(args[i]) == False:
-                return ("Name must contain letters only (Eng)", 0)
+                raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", args[i])
 
             elif args[i].capitalize() in state:
-                return ("Name repeated", 0)
+                raise DebitHandler.duplicate_name_exception("Duplicate name", args[i])
                 
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
@@ -380,7 +398,7 @@ class DebitHandler:
                 x.append(s)
 
         if x == list():
-            return ("Empty :(", 0)
+            raise DebitHandler.data_missing_exception()
         else:
             return ("\n".join(x), 0)
 
@@ -400,10 +418,10 @@ class DebitHandler:
         for name in args:
             name = name.capitalize()
             if not self.is_eng_str(name):
-                return ("Name must contain letters only (Eng)", 0)
+                raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", name)
 
             elif name in data:
-                return ("Name already taken", 0)
+                raise DebitHandler.duplicate_name_exception("Duplicate name", name)
 
             else:
                 data[name] = 0
@@ -415,13 +433,13 @@ class DebitHandler:
         data = self.load_data()
         name = args[0].capitalize()
         if len(args) != 1:
-            return ("Invalid command", 0)
+            raise DebitHandler.invalid_command_format_exception("/rm takes 1 argument", name)
 
         elif name not in data:
-            return ("Name not on the list", 0)
+            raise DebitHandler.unknown_username_exception("Name not on the list", name)
 
         elif data[name] != 0:
-            return ("Balance not 0", 0)
+            raise DebitHandler.forbidden_action_exception("Balance not 0")
 
         else:
             del data[name]
@@ -432,17 +450,18 @@ class DebitHandler:
     def change_name(self, args):
         data = self.load_data()
         if len(args) != 2:
-            return ("Invalid command", 0)
+            raise DebitHandler.invalid_command_format_exception("/nc takes 2 arguments", args)
+
         name, new_name = args[0].capitalize(), args[1].capitalize()
 
         if not self.is_eng_str(new_name):
-            return ("Name must contain letters only (Eng)", 0)
+            raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", new_name)
 
         elif name not in data:
-            return ("Name not on the list", 0)
+            raise DebitHandler.unknown_username_exception(name)
 
         elif new_name in data:
-            return ("Name already taken", 0)
+            raise DebitHandler.duplicate_name_exception(new_name)
 
         data[new_name] = data.pop(name)
         self.save_state(data)
@@ -459,22 +478,7 @@ class DebitHandler:
         money = float(args[-1])
 
         if don not in data:
-            return ("Name not on the list", 0)
-
-        # Provjera je li komanda namijenjena za grupu
-        if len(rec) == 1 and rec[0] == rec[0].upper():
-            check = self.groups_check(args)
-
-            if type(check) == str:
-                return (check, 0)
-            else:
-                args = check
-                rec = args[1:-1]
-
-        else:
-            for i in rec:
-                if i.capitalize() not in data:
-                    return ("Name not on the list", 0)
+            raise DebitHandler.unknown_username_exception(don)
 
         money_per_person = round(money / (len(rec) + 1), 2)
 
@@ -491,18 +495,18 @@ class DebitHandler:
         recs = list(map(lambda x: x.capitalize(), args[1::2]))
         amounts = list(map(lambda x: x, args[2::2]))
         if don.capitalize() not in data:
-            return ("Name not on the list", 0)
+            raise DebitHandler.unknown_username_exception(don)
 
         for i in recs:
             if i.capitalize() not in data:
-                return ("Name not on the list", 0)
+                raise DebitHandler.unknown_username_exception(i)
 
         for i in amounts:
             if not self.is_num(i):
-                return ("Invalid command", 0)
+                raise DebitHandler.invalid_arguments_exception()
 
         if len(recs) != len(amounts):
-            return ("Invalid command", 0)
+            raise DebitHandler.invalid_command_format_exception()
 
         amounts = [round(float(x), 2) for x in amounts]
 
@@ -522,18 +526,18 @@ class DebitHandler:
         money = float(args[2])
 
         if don not in state:
-            return ("Name not on list", 0)
+            raise DebitHandler.unknown_username_exception(don)
 
         groups = self.load_groups()
         if group_name not in groups:
-            return ("Group nonexisting", 0)
-        else:
-            rec = groups[group_name]
+            raise DebitHandler.unknown_group_exception(group_name)
 
-            if don not in rec:
-                return ("Name not in group", 0)
+        rec = groups[group_name]
 
-            rec.remove(don)
+        if don not in rec:
+            raise DebitHandler.unknown_username_exception(don)
+
+        rec.remove(don)
 
         money_per_person = round(money / (len(rec) + 1),2)
 
@@ -550,11 +554,11 @@ class DebitHandler:
     def undo(self):
         path = os.path.join(self.relative_path, "Logs", str(self.id) + ".txt")
         command = LogsHandler.get_undo_last_command(path)
+
         if command == None:
-            return ("Only transactions can be undone", 0)
+            raise DebitHandler.forbidden_action_exception("Only transactions can be undone")
 
         command = DebitHandler.resolvingAlgebraFormations(command)
-
         command = DebitHandler.invertNumberSignFromArray(command)
 
         self.commands[command[0]](command[1:])
@@ -568,7 +572,7 @@ class DebitHandler:
         L = [float(i) for i in L]
         return (round(sum(L), 4), 0)
 
-    def currencyConvert(self, args:list):
+    def state_multiply(self, args:list):
         args = DebitHandler.resolvingAlgebraFormations(args)
         multiplier: float = round(float(args[0]), 2)
         state = self.load_data()
@@ -579,7 +583,7 @@ class DebitHandler:
         if self.save_state(state):
             return ("State multiplied", 1)
         else:
-            return ("Error; sum not 0", 0)
+            raise DebitHandler.forbidden_action_exception("Sum is not 0")
 
     @staticmethod
     def invertNumberSignFromArray(args:list):
