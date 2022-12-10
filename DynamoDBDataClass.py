@@ -1,6 +1,8 @@
 from DebitHandler import DataInteractInterface
 import boto3
 
+
+
 class DynamoDBDataClass(DataInteractInterface):
     def __init__(self):
         self.dynamodb = boto3.resource("dynamodb")
