@@ -1,22 +1,8 @@
-1.
-def load_state(self, path = self.data_path) 
-# self.data_path se ne moze povuci
-
-2.
-def find_dest_group_path
-# return nejasan
-
 3. 
 kaosMjer
-
-6.
-/tg invers
 
 7.
 bot controller
 
 8.
-talking ben
-
-9.
-errore rijesiti pomocu exceptiona
+Transaction transfer sa /createlink & /link
