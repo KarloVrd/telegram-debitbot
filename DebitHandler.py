@@ -1,37 +1,88 @@
-from LogsHandler import LogsHandler
 import os
 import random
-import glob
 import abc
 
+class DataInteractInterface(abc.ABC):
+        @abc.abstractmethod
+        def load_state(self, chat_id) -> dict:
+            pass
 
+        @abc.abstractmethod
+        def save_state(self, state, chat_id):
+            pass
 
+        @abc.abstractmethod
+        def load_groups(self, chat_id) -> dict:
+            pass
+
+        @abc.abstractmethod
+        def save_groups(self, groups, chat_id):
+            pass
+
+        @abc.abstractmethod
+        def load_log(self, chat_id) -> tuple:
+            pass
+
+        @abc.abstractmethod
+        def save_log(self, log, chat_id):
+            pass
+        
+        @abc.abstractmethod
+        def get_id_by_name(self, chat_name) -> str:
+            pass
+        
 class DebitHandler:
-    def __init__(self):
-        self.relative_path = os.environ["WRITING_ROOT"]
+    def __init__(self, data_instance: DataInteractInterface):
         self.help_path = os.path.join(os.getcwd(), "help.txt")
-
+        self.data_instance = data_instance
         self.commands = {
             "t": self.transaction,
-            "td": self.division_transaction,
-            "tg": self.group_transaction,
-            "r": self.random_name,
-            "s": self.data_print_format,
-            "na": self.add_name,
-            "nr": self.remove_name,
-            "nc": self.change_name,
+            "td": self.transaction_division,
+            "tdex": self.division_transaction_excluding,
+            "tg": self.transaction_group,
+            "tgex": self.transaction_group_excluding,
+            "r": self.get_random_name,
+            "s": self.get_state_string,
+            "na": self.name_add,
+            "nr": self.name_remove,
+            "nc": self.name_change,
             "u": self.undo,
-            "h": self.load_help_str,
-            "help" : self.load_help_str,
-            "sum": self.sum,
-            "gc": self.group_create,
+            "h": self.get_help_str,
+            "help" : self.get_help_str,
+            "sum": self.get_state_sum,
+            "ga": self.group_add,
             "gr": self.group_delete,
-            "gl": self.groups_print,
+            "gl": self.get_groups_string,
             "st": self.state_transfer,
-            "sf": self.force_state,
+            "sf": self.state_force,
             "sm": self.state_multiply, #state multiply
-            "reset" : self.reset_state,
-            "sr" : self.reset_state,
+            "reset" : self.state_reset,
+            "sr" : self.state_reset,
+        }
+        # 0 - just send succ message, 1 - send succ message and state, 2 - func returns string
+        self.succ_respond = {
+            "t" : ("Transaction successful",1),
+            "td": ("Transaction successful",1),
+            "tg": ("Transaction successful",1),
+            "tdex": ("Transaction successful",1),
+            "tgex": ("Transaction successful",1),
+            "u" : ("Undo successful",1),
+            "na": ("Name added successfully",1),
+            "nr": ("Name removed successfully",1),
+            "nc": ("Name changed successfully",1),
+            "ga": ("Group added successfully",0),
+            "gr": ("Group removed successfully",0),
+            "gl": ("", 2),
+            "s" : ("", 2),
+            "st": ("State transfer successful",1),
+            "sf": ("State forced successfully",1),
+            "sm": ("State multiplied successfully",1),
+            "sr": ("State reset successfully",1),
+            "reset" : ("State reset successfully",1),
+            "h" : ("", 2),
+            "r" : ("", 2),
+            "help": ("", 2),
+            "sum": ("", 2),
         }
 
     class unknown_username_exception(Exception):
@@ -59,8 +110,8 @@ class DebitHandler:
             return f"{self.message}: {self.command}"
 
     class duplicate_name_exception(Exception):
-        def __init__(self, name = ""):
-            self.message = "Duplicate name"
+        def __init__(self, message = "Duplicate name", name = ""):
+            self.message = message
             self.name = name
 
         def __str__(self):
@@ -134,11 +185,12 @@ class DebitHandler:
 
         return array
 
-    def group_create(self, args):
-        state = self.load_data()
+    def group_add(self, args, chat_id):
+        state = self.data_instance.load_state(chat_id)
         key_word = args[0].upper()
-        members = list(map(lambda x: x.capitalize(), args[1:]))
-        groups = self.load_groups()
+        members = set(map(lambda x: x.capitalize(), args[1:]))
+
+        groups = self.data_instance.load_groups(chat_id)
         if key_word in groups:
             raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
         else:
@@ -148,33 +200,23 @@ class DebitHandler:
 
             groups[key_word] = members
 
-        self.save_groups(groups)
-        return ("Group created", 0)
-
-    def save_groups(self, groups):
-        groups_list = list()
-        for i in groups:
-            groups_list.append(i + "-" + " ".join(groups[i]))
-        f = open(self.groups_path, "w")
-        end_str = "\n".join(groups_list)
-        f.write(end_str)
-        f.close()
+        self.data_instance.save_groups(groups, chat_id)
         return True
 
-    def group_delete(self, args):
+    def group_delete(self, args, chat_id):
         key_word = args[0].upper()
 
-        groups = self.load_groups()
+        groups = self.data_instance.load_groups(chat_id)
         if key_word not in groups:
             raise DebitHandler.unknown_username_exception(key_word)
 
         del groups[key_word]
 
-        self.save_groups(groups)
-        return ("Group deleted", 0)
+        self.data_instance.save_groups(groups, chat_id)
+        return True
 
-    def groups_print(self):
-        groups = self.load_groups()
+    def get_groups_string(self, chat_id):
+        groups = self.data_instance.load_groups(chat_id)
 
         end_list = list()
         for i in groups:
@@ -183,41 +225,31 @@ class DebitHandler:
         if len(end_list) == 0:
             raise DebitHandler.data_missing_exception()
 
-        return ("\n".join(end_list), 0)
+        return "\n".join(end_list)
 
-    def load_groups(self):
-        try:
-            with open(self.groups_path, "r") as f:
-                text = f.readlines()
-
-        except:  # ako ne postoji, napravi file i vrati prazni dict
-            with open(self.groups_path, "a") as f:
-                pass
-            return dict()
-
-        groups = dict()
-        for i in text:
-            x = i.strip().split("-")
-            groups[x[0]] = x[1].split(" ")
-        return groups
-
-    def name_change_groups_fix(self, old_name, new_name):
-        groups = self.load_groups()
+    def name_change_groups_fix(self, old_name, new_name, chat_id):
+        groups = self.data_instance.load_groups(chat_id)
         key_words = groups.keys()
         for i in key_words:
             for j in range(0, len(groups[i])):
                 if old_name == groups[i][j]:
                     groups[i][j] = new_name
 
-        self.save_groups(groups)
+        self.data_instance.save_groups(groups, chat_id)
         return True
 
-    def state_transfer(self, args):
-        dest_group_name = args[0]
-        dest_group_path = self.find_dest_group_path(dest_group_name)
+    def find_dest_chat_id(self, dest_group_name):
+        dest_chat_id = self.data_instance.find_chat_id(dest_group_name)
+        if dest_chat_id == None:
+            raise DebitHandler.unknown_group_exception(dest_group_name)
+        return dest_chat_id
 
-        dest_group_state = self.load_data(dest_group_path)
-        state = self.load_data()
+    def state_transfer(self, args, chat_id):
+        dest_group_name = args[0]
+        dest_chat_id = self.find_dest_chat_id(dest_group_name)
+
+        dest_state = self.load_state(dest_chat_id)
+        state = self.data_instance.load_state(chat_id)
 
         members = args[1:]
         transfer_state = dict()
@@ -226,7 +258,7 @@ class DebitHandler:
             if (i[0].capitalize() not in state):
                 raise DebitHandler.unknown_username_exception(i[0])
 
-            elif i[1].capitalize() not in dest_group_state:
+            elif i[1].capitalize() not in dest_state:
                 raise DebitHandler.unknown_username_exception(i[1])
 
             transfer_state[i[1].capitalize()] = state[i[0].capitalize()]
@@ -234,36 +266,21 @@ class DebitHandler:
         # zbraja vrijednosti dvaju stanja
 
         for i in transfer_state:
-            dest_group_state[i] += transfer_state[i]
+            dest_state[i] += transfer_state[i]
 
-        self.save_state(dest_group_state, dest_group_path)
-        self.reset_state()
-        return ("Group transfered", 0)
+        self.data_instance.save_state(dest_state, dest_chat_id)
+        self.state_reset(chat_id)
+        return True
 
-    def find_dest_group_path(self, name):
-        dirname_ = glob.glob(
-            os.path.join(self.relative_path, "States", "*_" + name + ".txt")
-        )
-        path = os.path.join(self.relative_path, dirname_[0])
-
-        if len(dirname_) > 1:
-            raise DebitHandler.duplicate_name_exception("Multiple groups with same name", name)
-
-        elif len(dirname_) == 0:
-            raise DebitHandler.unknown_group_exception(name)
-
-        else:
-            return True, path
-
-    def reset_state(self):
-        data = self.load_data()
+    def state_reset(self, chat_id):
+        data = self.data_instance.load_state(chat_id)
         for i in data:
             data[i] = 0
 
-        self.save_state(data)
-        return ("State reset", 1)
+        self.data_instance.save_state(data, chat_id)
+        return True
 
-    def force_state(self, args):
+    def state_force(self, args, chat_id):
         state = dict()
         for i in range(0, len(args), 2):
             if DebitHandler.is_eng_str(args[i]) == False:
@@ -274,18 +291,10 @@ class DebitHandler:
                 
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
-        inbalance_fixed = False
-        if self.sum(state) != 0:
+        if self.get_state_sum(state) != 0:
             state = DebitHandler.fix_state_inbalance(state)
-            inbalance_fixed = True
 
-        if self.save_state(state):
-            if inbalance_fixed:
-                return ("State forced, inbalance fixed", 1)
-            else:
-                return ("Force state complete", 1)
-        else:
-            return ("Error; sum not 0", 0)
+        self.data_instance.save_state(state, chat_id)
         
     # state is better name for group state
     @staticmethod
@@ -300,96 +309,28 @@ class DebitHandler:
     
         return state
 
-    def commands_API(self, in_dict):
-        # return (0,0)
-        self.id = in_dict["id"]
-        self.data_path = os.path.join(
-            self.relative_path,
-            "States",
-            str(in_dict["id"]) + "_" + str(in_dict["title"]) + ".txt",
-        )
-        self.groups_path = os.path.join(
-            self.relative_path, "Groups", str(self.id) + ".txt"
-        )
-
-        if in_dict["args"] == list():
-            res = self.commands[in_dict["comm"]]()
+    def commands_API(self, command_code: str, args: list(), chat_id: int) -> bool:
+        if args == list():
+            res = self.commands[command_code](chat_id)
         else:
-            res = self.commands[in_dict["comm"]](in_dict["args"])
+            res = self.commands[command_code](args, chat_id)
 
-        # printa listu dugova ako treba
-        if res[1]:
-            msg_out = "{}:\n------------------\n{}".format(
-                res[0], self.data_print_format()[0]
-            )
+        succ_message = self.succ_respond[command_code][0]
+        if self.succ_respond[command_code][1] == 0:
+            return succ_message
 
-        else:  # ne printa listu
-            msg_out = res[0]
+        elif self.succ_respond[command_code][1] == 1:
+            return succ_message + "\n---------------------\n" + self.get_state_string(chat_id)
 
-        return msg_out
+        elif self.succ_respond[command_code][1] == 2:
+            return res
 
-    def load_data(self, path=False) -> dict:
-        if not path:
-            path = self.data_path
-        data = dict()
-        try:
-            f = open(path, "r")  # , encoding='utf-8')
-            data = f.readlines()
-            f.close()
-            dict1 = dict()
-            for i in data:
-                i = i.split(" ")
-                dict1[i[0]] = float(i[1])
-
-        except FileNotFoundError:
-            dirname_ = glob.glob(os.path.join(path.split("_")[0] + "*.txt"))
-
-            # promijenjeno je ime grupe, bot treba promijeniti ime u zapisima
-            if len(dirname_) == 1:
-                old_data_path = os.path.join(self.relative_path, dirname_[0])
-                os.rename(old_data_path, path)
-
-                f = open(path, "r")  # , encoding='utf-8')
-                data = f.readlines()
-                f.close()
-                dict1 = dict()
-                for i in data:
-                    i = i.split(" ")
-                    dict1[i[0]] = float(i[1])
-
-            # grupa nije postojala
-            else:
-                f = open(self.data_path, "w")
-                f.close()
-                dict1 = dict()
-
-        return dict1
-
-    def save_state(self, data, path=False):
-        if not path:
-            path = self.data_path
-
+    def get_state_string(self, chat_id) -> tuple:
+        state = self.data_instance.load_state(chat_id)
         x = list()
-        for key in data.keys():
-
-            name = key.strip().capitalize()
-            value = str(round(float(data[key]), 2))
-
-            s = "{} {}".format(name, value)
-            x.append(s)
-        text = "\n".join(x)
-
-        f = open(path, "w")
-        f.write(text)
-        f.close()
-        return True
-
-    def data_print_format(self):
-        data = self.load_data()
-        x = list()
-        sorted_keys = sorted(data, key=data.get)
+        sorted_keys = sorted(state, key=state.get)
         for key in sorted_keys:
-            value = data[key]
+            value = state[key]
             if value <= 0:
                 s = "{} {}".format(key.strip(), str(round(value, 2)))
                 x.append(s)
@@ -397,108 +338,88 @@ class DebitHandler:
                 s = "{} +{}".format(key.strip(), str(round(value, 2)))
                 x.append(s)
 
-        if x == list():
+        if len(x) == 0:
             raise DebitHandler.data_missing_exception()
         else:
-            return ("\n".join(x), 0)
+            return "\n".join(x)
 
-    def updata_value(self, name, money):
-        data = self.load_data()
-        data[name] += money
-        self.save_state(data)
+    def get_help_str(self, chat_id):
+        with open(self.help_path, "r", encoding="utf-8") as f:
+            help_str = "".join(f.readlines())
+            
+        return help_str
 
-    def load_help_str(self):
-        f = open(self.help_path, "r", encoding="utf-8")
-        help_str = "".join(f.readlines())
-        f.close()
-        return (help_str, 0)
+    def name_add(self, args, chat_id):
+        state = self.data_instance.load_state(chat_id)
+        names = set([x.capitalize() for x in args])
 
-    def add_name(self, args):
-        data = self.load_data()
-        for name in args:
-            name = name.capitalize()
+        for name in names:
             if not self.is_eng_str(name):
-                raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", name)
+                raise DebitHandler.invalid_arguments_exception("Name must contain letters only", name)
 
-            elif name in data:
+            elif name in state:
                 raise DebitHandler.duplicate_name_exception("Duplicate name", name)
 
             else:
-                data[name] = 0
+                state[name] = 0
 
-        self.save_state(data)
-        return ("Name added", 1)
+        self.data_instance.save_state(state, chat_id)
+        return True
 
-    def remove_name(self, args):
-        data = self.load_data()
-        name = args[0].capitalize()
-        if len(args) != 1:
-            raise DebitHandler.invalid_command_format_exception("/rm takes 1 argument", name)
+    def name_remove(self, args, chat_id):
+        data = self.data_instance.load_state(chat_id)
+        names = [x.capitalize() for x in args]
 
-        elif name not in data:
-            raise DebitHandler.unknown_username_exception("Name not on the list", name)
+        for name in names:
+            if name not in data:
+                raise DebitHandler.unknown_username_exception(name)
 
-        elif data[name] != 0:
-            raise DebitHandler.forbidden_action_exception("Balance not 0")
+            elif data[name] != 0:
+                raise DebitHandler.forbidden_action_exception("Balance not 0")
 
-        else:
-            del data[name]
+            else:
+                del data[name]
 
-        self.save_state(data)
-        return ("Name removed", 1)
+        self.data_instance.save_state(data, chat_id)
+        return True
 
-    def change_name(self, args):
-        data = self.load_data()
+    def name_change(self, args, chat_id):
+        state = self.data_instance.load_state(chat_id)
         if len(args) != 2:
             raise DebitHandler.invalid_command_format_exception("/nc takes 2 arguments", args)
 
         name, new_name = args[0].capitalize(), args[1].capitalize()
 
         if not self.is_eng_str(new_name):
-            raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", new_name)
+            raise DebitHandler.invalid_arguments_exception("Name must contain letters only", new_name)
 
-        elif name not in data:
+        elif name not in state:
             raise DebitHandler.unknown_username_exception(name)
 
-        elif new_name in data:
-            raise DebitHandler.duplicate_name_exception(new_name)
+        elif new_name in state:
+            raise DebitHandler.duplicate_name_exception("Duplicate name",new_name)
 
-        data[new_name] = data.pop(name)
-        self.save_state(data)
-        self.name_change_groups_fix(name, new_name)
+        state[new_name] = state.pop(name)
+        self.name_change_groups_fix(name, new_name, chat_id)
+        self.data_instance.save_state(state, chat_id)
 
-        return ("Name changed", 1)
+        return True
 
-    def division_transaction(self, args):
-        args = DebitHandler.resolvingAlgebraFormations(args)
-        data = self.load_data()
-
-        don = args[0].capitalize()
-        rec = args[1:-1]
-        money = float(args[-1])
-
-        if don not in data:
-            raise DebitHandler.unknown_username_exception(don)
-
-        money_per_person = round(money / (len(rec) + 1), 2)
-
-        for i in rec:
-            self.updata_value(i.capitalize(), -1 * money_per_person)
-        self.updata_value(don, money_per_person * len(rec))
-        return ("Transaction complete", 1)
-
-    def transaction(self, args):
+    def transaction(self, args, chat_id):
         args = DebitHandler.resolvingAlgebraFormations(args)
 
-        data = self.load_data()
+        state = self.data_instance.load_state(chat_id)
+
         don = args[0].capitalize()
         recs = list(map(lambda x: x.capitalize(), args[1::2]))
         amounts = list(map(lambda x: x, args[2::2]))
-        if don.capitalize() not in data:
+
+
+        if don not in state:
             raise DebitHandler.unknown_username_exception(don)
 
         for i in recs:
-            if i.capitalize() not in data:
+            if i not in state:
                 raise DebitHandler.unknown_username_exception(i)
 
         for i in amounts:
@@ -508,79 +429,172 @@ class DebitHandler:
         if len(recs) != len(amounts):
             raise DebitHandler.invalid_command_format_exception()
 
+
         amounts = [round(float(x), 2) for x in amounts]
 
         for i in range(len(recs)):
-            self.updata_value(recs[i], -1 * amounts[i])
+            state[recs[i]] +=  -1 * amounts[i]
 
-        self.updata_value(don, sum(amounts))
+        state[don] += sum(amounts)
 
-        return ("Transaction complete", 1)
+        self.data_instance.save_state(state, chat_id)
+        return True
 
-    def group_transaction(self, args):
+    def transaction_division(self, args, chat_id):
         args = DebitHandler.resolvingAlgebraFormations(args)
-        state = self.load_data()
+        state = self.data_instance.load_state(chat_id)
 
         don = args[0].capitalize()
-        group_name = args[1].upper()
-        money = float(args[2])
+        recs = list(map(lambda x: x.capitalize(), args[1:-1]))
+        money = float(args[-1])
 
         if don not in state:
             raise DebitHandler.unknown_username_exception(don)
 
-        groups = self.load_groups()
+        for i in recs:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
+        
+        money_per_person = round(money / (len(recs) + 1), 2)
+
+        for i in recs:
+            state[i.capitalize()] += -1 * money_per_person
+        state[don] += money_per_person * len(recs)
+
+        self.data_instance.save_state(state, chat_id)
+        return True
+
+    def division_transaction_excluding(self, args, chat_id):
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        state = self.data_instance.load_state(chat_id)
+
+        don = args[0].capitalize()
+        recs = list(map(lambda x: x.capitalize(), args[1:-1]))
+        money = float(args[-1])
+
+        if don not in state:
+            raise DebitHandler.unknown_username_exception(don)
+
+        for i in recs:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
+        
+        money_per_person = round(money / len(recs), 2)
+
+        for i in recs:
+            state[i.capitalize()] += -1 * money_per_person
+        state[don] += money_per_person * len(recs)
+
+        self.data_instance.save_state(state, chat_id)
+        return True
+
+    def transaction_group(self, args, chat_id):
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        state = self.data_instance.load_state(chat_id)
+
+        # parsing arguments
+        don = args[0].capitalize()
+        group_name = args[1].upper()
+        money = float(args[2])
+
+        # checking arguments
+        if don not in state:
+            raise DebitHandler.unknown_username_exception(don)
+
+        groups = self.data_instance.load_groups(chat_id)
         if group_name not in groups:
             raise DebitHandler.unknown_group_exception(group_name)
 
-        rec = groups[group_name]
+        members = groups[group_name]
 
-        if don not in rec:
+        for i in members:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
+
+        # updating state
+        money_per_person = round(money / len(members), 2)
+
+        members.remove(don)
+
+        for i in members:
+            state[i] += -1 * money_per_person
+
+        state[don] += money_per_person * len(members)
+
+        self.data_instance.save_state(state, chat_id)
+        return True
+    
+    def transaction_group_excluding(self, args, chat_id):
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        state = self.data_instance.load_state(chat_id)
+
+        # parsing arguments
+        don = args[0].capitalize()
+        group_name = args[1].upper()
+        money = float(args[2])
+
+        # checking arguments
+        if don not in state:
             raise DebitHandler.unknown_username_exception(don)
 
-        rec.remove(don)
+        groups = self.data_instance.load_groups(chat_id)
+        if group_name not in groups:
+            raise DebitHandler.unknown_group_exception(group_name)
 
-        money_per_person = round(money / (len(rec) + 1),2)
+        members = groups[group_name]
 
-        for i in rec:
-            self.updata_value(i.capitalize(), -1 * money_per_person)
-        self.updata_value(don, money_per_person * len(rec))
-        return ("Transaction complete", 1)
+        for i in members:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
 
-    def random_name(self):
-        data = self.load_data()
-        keys = list(data.keys())
+        # updating state
+        members.remove(don)
+
+        money_per_person = round(money / len(members), 2)
+
+        for i in members:
+            state[i] += -1 * money_per_person
+
+        state[don] += money_per_person * len(members)
+
+        self.data_instance.save_state(state, chat_id)
+        return True
+
+    def get_random_name(self, chat_id):
+        state = self.data_instance.load_state(chat_id)
+        keys = list(state.keys())
         return (random.choice(keys), 0)
 
-    def undo(self):
-        path = os.path.join(self.relative_path, "Logs", str(self.id) + ".txt")
-        command = LogsHandler.get_undo_last_command(path)
+    def undo(self, chat_id):
+        message = self.data_instance.load_log(chat_id)[2].split(" ")
 
-        if command == None:
+        if message[0] not in ["/t", "/tg", "/td", "/tgex", "/tdex"]:
             raise DebitHandler.forbidden_action_exception("Only transactions can be undone")
 
-        command = DebitHandler.resolvingAlgebraFormations(command)
-        command = DebitHandler.invertNumberSignFromArray(command)
+        message = DebitHandler.resolvingAlgebraFormations(message)
+        message = DebitHandler.invertNumberSignFromArray(message)
 
-        self.commands[command[0]](command[1:])
+        self.commands[message[0]](message[1:])
 
-        return ("Undone", 1)
+        return True
 
-    def sum(self, state=False):
+    def get_state_sum(self, state=None, chat_id=None):
         if not state:
-            state = self.load_data()
+            state = self.data_instance.load_state(chat_id)
+
         L = state.values()
         L = [float(i) for i in L]
         return (round(sum(L), 4), 0)
 
-    def state_multiply(self, args:list):
+    def state_multiply(self, args:list, chat_id):
         args = DebitHandler.resolvingAlgebraFormations(args)
         multiplier: float = round(float(args[0]), 2)
-        state = self.load_data()
+        state = self.data_instance.load_state(chat_id)
         name: str
         for name in state.keys():
             state[name] = float(state[name]) * multiplier
 
-        if self.save_state(state):
+        if self.data_instance.save_state(state, chat_id):
             return ("State multiplied", 1)
         else:
             raise DebitHandler.forbidden_action_exception("Sum is not 0")

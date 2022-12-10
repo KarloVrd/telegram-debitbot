@@ -15,11 +15,11 @@ class CCHandler:
             "cr": self.remove_custom_comm,
         }
 
-    def commands_API(self, in_dict):
-        if in_dict["args"] == list():
-            res = self.commands[in_dict["comm"]]()
+    def commands_API(self, command_code, args):
+        if args == list():
+            res = self.commands[command_code]()
         else:
-            res = self.commands[in_dict["comm"]](in_dict["args"])
+            res = self.commands[command_code](args)
 
         return res
 

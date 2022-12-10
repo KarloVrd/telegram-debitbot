@@ -1,21 +1,20 @@
 # -*- coding: UTF8 -*-
-import traceback
 import requests
 import json
-import os, sys
+import os
+from TextFileDataClass import TextFileDataClass
 
 from DebitHandler import DebitHandler
 from CustomCommandsHandler import CCHandler
-from LogsHandler import LogsHandler
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 testerId = 1217535067
 
-DH = DebitHandler()
+t = TextFileDataClass()
+DH = DebitHandler(t)
 CC = CCHandler()
-LH = LogsHandler()
 
 def get_updates(offset=0, timeout=30):  # 30
     method = "getUpdates"
@@ -82,15 +81,16 @@ def process_event(event, testMode=False):
 
         chat_id = event["message"]["chat"]["id"]
         message_id = event["message"]["message_id"]
+        sender_id = event["message"]["from"]["id"]
 
         if testMode:
-            if event["message"]["from"]["id"] != testerId:
+            if sender_id != testerId:
                 msg_out = "Maintenance mode, try again later"
                 reply_to_message(chat_id = chat_id, text = msg_out, message_id = message_id)
-                return
+                return False
 
-        update_text = (
-            event["message"]["text"][1:]
+        message = (
+            event["message"]["text"]
             .split("#")[0]
             .replace("\n", " ")
             .replace("\r", " ")
@@ -99,43 +99,31 @@ def process_event(event, testMode=False):
             .split(" ")
         )
         
-        update_text = [i for i in update_text if i != ""]
-        event["message"]["text"] = " ".join(update_text)
+        message = [i for i in message if i != ""]
 
-        if "title" in event["message"]["chat"]:
-            title = event["message"]["chat"]["title"].replace(" ", "_")
-        else:
-            title = get_user_name(event)
+        command_code = message[0][1:]
+        args = message[1:]
 
-        in_dict = {
-            "comm": update_text[0].lower(),
-            "args": update_text[1:],
-            "id": event["message"]["chat"]["id"],
-            "title": title,
-        }
-    
         custom_commands = CC.load_custom_commands()
         # debit commands
-        if in_dict["comm"] in DH.commands:
-            msg_out = DH.commands_API(in_dict)
-            LH.save_input(event)
+        if command_code in DH.commands:
+            msg_out = DH.commands_API(command_code=command_code, args=args, chat_id=chat_id)
+            t.save_log(chat_id, sender_id, message)
 
         # custom command
-        elif in_dict["comm"] in custom_commands:
-            msg_out = custom_commands[in_dict["comm"]]
-            LH.save_input(event)
+        elif command_code in custom_commands:
+            msg_out = custom_commands[command_code]
 
         # handle custom commands
-        elif in_dict["comm"] in CC.commands:
-            msg_out = CC.commands_API(in_dict)
-            LH.save_input(event)
+        elif command_code in CC.commands:
+            msg_out = CC.commands_API(command_code, args)
 
         else:
             msg_out = "Unknown command"
         
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
-    except Exception as e:  #    ERROR
+    except FileNotFoundError as e:  #    ERROR
         if testMode:
             pass
             #traceback.format_exc()

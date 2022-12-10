@@ -1,2 +1,1 @@
-TRI-A B C
-ABC-A B C
+ABC-C B A

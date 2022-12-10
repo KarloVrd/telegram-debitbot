@@ -43,31 +43,41 @@ Functions like Transaction division but with preselected users saved in a group.
 /tg [surplus user] [group name] [amount]
 /tg tvrtko party 500
 
-<b>State Force</b>
-Allows user to set the state manually. Inbalance will be divided among users.
-/sf ([user] [balance]) * n
-/sf tvrtko 10 grgur 5 jura -5 karlo -10
+<b>Transaction Division Excluding</b>
+Make transaction that divides deficit among all people listed (excluding surplus user).
+/tdex [surplus user] [deficit user] * n [amount]
+/tdex tvrtko karlo grgur jura 900
 
-<b>State</b>
-Returns state
-/s
+<b>Transaction Group Excluding</b>
+Functions like Transaction Division Excluding but with preselected users saved in a group.
+/tgex [surplus user] [group name] [amount]
+/tgex tvrtko party 500
 
 <b>Undo</b>
 Undoes last transaction (Only transactions).
 /u
 
+<b>State</b>
+Returns state
+/s
+
+<b>State Force</b>
+Allows user to set the state manually. Inbalance will be divided among users.
+/sf ([user] [balance]) * n
+/sf tvrtko 10 grgur 5 jura -5 karlo -10
+
+<b>State multiply</b>
+Multiplies state by provided number.
+/sm [number]
+/sm 7.53
+
+<b>State Reset</b>
+Resets state to 0
+/sr
+
 <b>Random</b>
 Returns random user from a list
 /r
-
-<b>Reset</b>
-Resets state to 0
-/reset
-
-<b>Currency Convert</b>
-Multiplies state by provided number.
-/currencyconvert [number]
-/currencyconvert 7.53
 
 <b>Custom command</b>
 Returns output for custom command
@@ -77,9 +87,9 @@ Returns output for custom command
 Returns list of custom commands
 /cl
 
-<b>Command Create</b>
+<b>Command Add</b>
 Creates custom command
-/cc [command] [output]
+/ca [command] [output]
 
 <b>Command Remove</b>
 Removes custom command
