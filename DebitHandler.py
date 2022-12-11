@@ -24,7 +24,7 @@ class DataInteractInterface(abc.ABC):
             pass
 
         @abc.abstractmethod
-        def save_log(self, log, chat_id):
+        def save_log(self, log:str, chat_id):
             pass
         
         @abc.abstractmethod
@@ -578,7 +578,7 @@ class DebitHandler:
 
         return True
 
-    def get_state_sum(self, state=None, chat_id=None):
+    def get_state_sum(self, chat_id=None, state=None):
         if not state:
             state = self.data_instance.load_state(chat_id)
 

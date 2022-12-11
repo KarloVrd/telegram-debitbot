@@ -52,7 +52,6 @@ class TextFileDataClass(DataInteractInterface):
 
         # open any file with the chat_id infront
         path_list = glob.glob(os.path.join(self.groups_path, chat_id + "*.txt"))
-        print(path_list)
         if len(path_list) == 1:
             path = path_list[0]
             

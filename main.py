@@ -103,7 +103,7 @@ def process_event(event, testMode=False):
 
         command_code = message[0][1:]
         args = message[1:]
-
+        message = " ".join(message)
         custom_commands = CC.load_custom_commands()
         # debit commands
         if command_code in DH.commands:
@@ -123,7 +123,7 @@ def process_event(event, testMode=False):
         
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
-    except FileNotFoundError as e:  #    ERROR
+    except Exception as e:  #    ERROR
         if testMode:
             pass
             #traceback.format_exc()
