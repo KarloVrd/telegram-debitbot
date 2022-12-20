@@ -13,10 +13,10 @@ Changes username
 /nc [old username] [new username]
 /nc tvrtko tvrtkonator
 
-<b>Group Add</b>
+<b>Group Create</b>
 Creates group
-/ga [group name] [user] * n
-/ga party karlo tvrtko jura grgur
+/gc [group name] [user] * n
+/gc party karlo tvrtko jura grgur
 
 <b>Group Remove</b>
 Removes group
@@ -78,6 +78,22 @@ Resets state to 0
 <b>Random</b>
 Returns random user from a list
 /r
+
+<b>Custom command</b>
+Returns output for custom command
+/[custom command]
+
+<b>Custom Commands List</b>
+Returns list of custom commands
+/cl
+
+<b>Command Add</b>
+Creates custom command
+/ca [command] [output]
+
+<b>Command Remove</b>
+Removes custom command
+/cr [command]
 
 <b>Help</b>
 Returns help message

@@ -1,8 +1,9 @@
-3. 
+Transaction transfer sa /createlink & /link
+
+Anti-spam
+
 kaosMjer
 
-7.
-bot controller
+Permissions
 
-8.
-Transaction transfer sa /createlink & /link
+bot controller

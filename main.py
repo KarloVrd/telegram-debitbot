@@ -2,7 +2,7 @@
 import requests
 import json
 import os
-from TextFileDataClass import TextFileDataClass
+from DynamoDBDataClass import DynamoDBDataClass
 
 from DebitHandler import DebitHandler
 from CustomCommandsHandler import CCHandler
@@ -12,7 +12,7 @@ url = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 testerId = 1217535067
 
-t = TextFileDataClass()
+t = DynamoDBDataClass()
 DH = DebitHandler(t)
 CC = CCHandler()
 
@@ -29,8 +29,8 @@ def send_message(chat_id, text):
     resp = requests.post(url + method, params)
     return resp
 
-def reply_to_message(chat_id, text, message_id):
-    params = {"chat_id": chat_id, "text": text, "parse_mode": "HTML", "reply_to_message_id": message_id}
+def reply_to_message(chat_id, text, message_id, parse_mode="HTML"):
+    params = {"chat_id": chat_id, "text": text, "parse_mode": parse_mode, "reply_to_message_id": message_id}
     method = "sendMessage"
     resp = requests.post(url + method, params)
     return resp
@@ -101,37 +101,42 @@ def process_event(event, testMode=False):
         
         message = [i for i in message if i != ""]
 
+        # remove '/' from command
         command_code = message[0][1:]
         args = message[1:]
-        message = " ".join(message)
-        custom_commands = CC.load_custom_commands()
+        command = " ".join(message)[1:]
+
+        # custom_commands = CC.load_custom_commands()
         # debit commands
         if command_code in DH.commands:
             msg_out = DH.commands_API(command_code=command_code, args=args, chat_id=chat_id)
-            t.save_log(chat_id, sender_id, message)
+            t.save_log(command=command,sender_id=sender_id,chat_id=chat_id)
 
-        # custom command
-        elif command_code in custom_commands:
-            msg_out = custom_commands[command_code]
+        # # custom command
+        # elif command_code in custom_commands:
+        #     msg_out = custom_commands[command_code]
 
-        # handle custom commands
-        elif command_code in CC.commands:
-            msg_out = CC.commands_API(command_code, args)
+        # # handle custom commands
+        # elif command_code in CC.commands:
+        #     msg_out = CC.commands_API(command_code, args)
 
         else:
             msg_out = "Unknown command"
-        
+        #send_message(chat_id = chat_id, text = msg_out)
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
     except Exception as e:  #    ERROR
-        if testMode:
-            pass
-            #traceback.format_exc()
-        msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
-        msg_out = str(e)
-        
+        # check if error is from DebitHandler
+        if type(e) in DH.exceptions_list:
+            msg_out = str(e)
+        else:
+            if testMode:
+                #pass
+                raise e
+            msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
+            msg_out = "Invalid command"
+                 
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
-
 
 class BotApi:
     def __init__(self):
@@ -154,6 +159,9 @@ class BotApi:
 
 if __name__ == "__main__":
     try:
+        # send aws event
+        # aws_lambda_handler(event = json.loads(open("event.json", "r").read()), context = None)
+
         send_message(testerId, "Bot started")
         ap = BotApi()
         print("Start")

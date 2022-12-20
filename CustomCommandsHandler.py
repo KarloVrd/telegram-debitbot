@@ -1,6 +1,4 @@
 import os
-from DebitHandler import DebitHandler
-from sys import platform
 
 class CCHandler:
     def __init__(self):

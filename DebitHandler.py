@@ -20,11 +20,11 @@ class DataInteractInterface(abc.ABC):
             pass
 
         @abc.abstractmethod
-        def load_log(self, chat_id) -> tuple:
+        def load_log(self, chat_id, reverse_index) -> tuple:
             pass
 
         @abc.abstractmethod
-        def save_log(self, log:str, chat_id):
+        def save_log(self, message:str, sender_id, chat_id):
             pass
         
         @abc.abstractmethod
@@ -84,6 +84,15 @@ class DebitHandler:
             "help": ("", 2),
             "sum": ("", 2),
         }
+        self.exceptions_list = [
+            self.unknown_username_exception,
+            self.unknown_group_exception,
+            self.invalid_arguments_exception,
+            self.duplicate_name_exception,
+            self.data_missing_exception,
+            self.invalid_command_format_exception,
+            self.forbidden_action_exception,
+        ]
 
     class unknown_username_exception(Exception):
         def __init__(self, name):
@@ -165,25 +174,26 @@ class DebitHandler:
     def resolvingAlgebraFormations(array: list) -> list:
         i = 0
         isLastNum: bool = False
-
-        while (i < len(array)):
-            if DebitHandler.is_eng_str(array[i]) == False:
+        arrayOut = array.copy()
+        arrayOut = [str(i) for i in arrayOut]
+        while (i < len(arrayOut)):
+            if DebitHandler.is_eng_str(arrayOut[i]) == False:
                 if isLastNum:
-                    array[i - 1] = array[i - 1] + array[i]
-                    array.pop(i)
+                    arrayOut[i - 1] = arrayOut[i - 1] + arrayOut[i]
+                    arrayOut.pop(i)
                 else:
                     i += 1
                 isLastNum = True
             else:
                 if isLastNum == True:
-                    array[i-1] = eval(array[i-1])
+                    arrayOut[i-1] = eval(arrayOut[i-1])
                 isLastNum = False
                 i += 1
 
         if isLastNum == True:
-            array[-1] = eval(array[-1])
+            arrayOut[-1] = eval(arrayOut[-1])
 
-        return array
+        return arrayOut
 
     def group_add(self, args, chat_id):
         state = self.data_instance.load_state(chat_id)
@@ -231,9 +241,9 @@ class DebitHandler:
         groups = self.data_instance.load_groups(chat_id)
         key_words = groups.keys()
         for i in key_words:
-            for j in range(0, len(groups[i])):
-                if old_name == groups[i][j]:
-                    groups[i][j] = new_name
+            if old_name in groups[i]:
+                groups[i].remove(old_name)
+                groups[i].add(new_name)
 
         self.data_instance.save_groups(groups, chat_id)
         return True
@@ -291,7 +301,7 @@ class DebitHandler:
                 
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
-        if self.get_state_sum(state) != 0:
+        if self.get_state_sum(state=state) != 0:
             state = DebitHandler.fix_state_inbalance(state)
 
         self.data_instance.save_state(state, chat_id)
@@ -299,7 +309,14 @@ class DebitHandler:
     # state is better name for group state
     @staticmethod
     def fix_state_inbalance(state: dict) -> dict:
+        
+        state = state.copy()
+        state = {i: round(state[i], 2) for i in state}
         difference = sum(list(state.values()))
+
+        if abs(difference) < 0.00001:
+            return state
+            
         remainder = (100 * difference % len(state)) / 100
         for i in state:
             state[i] -= (100 * difference // len(state)) / 100
@@ -309,7 +326,8 @@ class DebitHandler:
     
         return state
 
-    def commands_API(self, command_code: str, args: list(), chat_id: int) -> bool:
+    def commands_API(self, command_code: str, args: list, chat_id: int) -> bool:
+        args = DebitHandler.resolvingAlgebraFormations(args)
         if args == list():
             res = self.commands[command_code](chat_id)
         else:
@@ -325,23 +343,65 @@ class DebitHandler:
         elif self.succ_respond[command_code][1] == 2:
             return res
 
-    def get_state_string(self, chat_id) -> tuple:
+    def get_state_string_2(self, chat_id) -> tuple:
         state = self.data_instance.load_state(chat_id)
-        x = list()
         sorted_keys = sorted(state, key=state.get)
+
+        if len(sorted_keys) == 0:
+            raise DebitHandler.data_missing_exception()
+            
+        max_name_width = max([len(i) for i in sorted_keys])
+        max_whole_num_width = max([len(str(state[i]).split(".")[0]) for i in sorted_keys])
+
+        state_string = ""
+        lineSet = False
         for key in sorted_keys:
             value = state[key]
-            if value <= 0:
-                s = "{} {}".format(key.strip(), str(round(value, 2)))
-                x.append(s)
+            if value < 0:
+                
+                value = str(value)
             elif value > 0:
-                s = "{} +{}".format(key.strip(), str(round(value, 2)))
-                x.append(s)
+                if lineSet == False:
+                    state_string += "-------------------\n"
+                    lineSet = True
+                value =  "+" + str(value)
+            else:
+                if lineSet == False:
+                    state_string += "-------------------\n"
+                    lineSet = True
+                value = " " + str(value)
 
-        if len(x) == 0:
+            whole_num_width = len(value.split(".")[0])
+            state_string += key.ljust(max_name_width) + " " + " " * (max_whole_num_width - whole_num_width) + value + "\n"
+
+        return "<pre>" + state_string + "</pre>"
+    
+    def get_state_string(self, chat_id) -> tuple:
+        state = self.data_instance.load_state(chat_id)
+        sorted_keys = sorted(state, key=state.get)
+
+        if len(sorted_keys) == 0:
             raise DebitHandler.data_missing_exception()
-        else:
-            return "\n".join(x)
+            
+        max_name_width = max([len(i) for i in sorted_keys])
+        max_num_width = max([len(str("%.2f" % abs(state[i]))) for i in sorted_keys])
+
+        state_string = ""
+        for key in sorted_keys:
+            value = state[key]
+            if value < 0:
+                value = "%.2f" % abs(value)
+                value = "- " + value.rjust(max_num_width)
+            elif value > 0:
+                value = "%.2f" % value
+                value = "+ " + value.rjust(max_num_width)
+            else:
+                value = "%.2f" % value
+                value = "  " + value.rjust(max_num_width)
+
+            state_string += key.ljust(max_name_width) + " " + value + "\n"
+
+        return "<pre>" + state_string + "</pre>"
 
     def get_help_str(self, chat_id):
         with open(self.help_path, "r", encoding="utf-8") as f:
@@ -361,6 +421,8 @@ class DebitHandler:
                 raise DebitHandler.duplicate_name_exception("Duplicate name", name)
 
             else:
+                if len(name) > 20:
+                    raise DebitHandler.invalid_arguments_exception("Name is too long (20 chars max)", name)
                 state[name] = 0
 
         self.data_instance.save_state(state, chat_id)
@@ -398,6 +460,9 @@ class DebitHandler:
 
         elif new_name in state:
             raise DebitHandler.duplicate_name_exception("Duplicate name",new_name)
+        
+        elif len(new_name) > 20:
+            raise DebitHandler.invalid_arguments_exception("Name is too long", name)
 
         state[new_name] = state.pop(name)
         self.name_change_groups_fix(name, new_name, chat_id)
@@ -406,8 +471,6 @@ class DebitHandler:
         return True
 
     def transaction(self, args, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
-
         state = self.data_instance.load_state(chat_id)
 
         don = args[0].capitalize()
@@ -433,7 +496,7 @@ class DebitHandler:
         amounts = [round(float(x), 2) for x in amounts]
 
         for i in range(len(recs)):
-            state[recs[i]] +=  -1 * amounts[i]
+            state[recs[i]] += -1 * amounts[i]
 
         state[don] += sum(amounts)
 
@@ -441,7 +504,6 @@ class DebitHandler:
         return True
 
     def transaction_division(self, args, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
         state = self.data_instance.load_state(chat_id)
 
         don = args[0].capitalize()
@@ -465,7 +527,6 @@ class DebitHandler:
         return True
 
     def division_transaction_excluding(self, args, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
         state = self.data_instance.load_state(chat_id)
 
         don = args[0].capitalize()
@@ -489,7 +550,6 @@ class DebitHandler:
         return True
 
     def transaction_group(self, args, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
         state = self.data_instance.load_state(chat_id)
 
         # parsing arguments
@@ -525,7 +585,6 @@ class DebitHandler:
         return True
     
     def transaction_group_excluding(self, args, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
         state = self.data_instance.load_state(chat_id)
 
         # parsing arguments
@@ -566,17 +625,25 @@ class DebitHandler:
         return (random.choice(keys), 0)
 
     def undo(self, chat_id):
-        message = self.data_instance.load_log(chat_id)[2].split(" ")
+        log = self.data_instance.load_log(chat_id, 0)
+        command = log["command"].split(" ")
+        command_code = command[0]
+        args = command[1:]
 
-        if message[0] not in ["/t", "/tg", "/td", "/tgex", "/tdex"]:
+        if command_code not in ["t", "tg", "td", "tgex", "tdex"]:
             raise DebitHandler.forbidden_action_exception("Only transactions can be undone")
 
-        message = DebitHandler.resolvingAlgebraFormations(message)
-        message = DebitHandler.invertNumberSignFromArray(message)
+        if len(args) == 0:
+            raise DebitHandler.forbidden_action_exception("Transaction was invalid")
 
-        self.commands[message[0]](message[1:])
+        args = DebitHandler.resolvingAlgebraFormations(args)
+        args = DebitHandler.invertNumberSignFromArray(args)
 
-        return True
+        if self.commands[command_code](args, chat_id):
+            #self.data_instance.remove_log(chat_id, 0)
+            return True
+        else:
+            raise DebitHandler.forbidden_action_exception("Undo failed")
 
     def get_state_sum(self, chat_id=None, state=None):
         if not state:
@@ -587,17 +654,16 @@ class DebitHandler:
         return (round(sum(L), 4), 0)
 
     def state_multiply(self, args:list, chat_id):
-        args = DebitHandler.resolvingAlgebraFormations(args)
-        multiplier: float = round(float(args[0]), 2)
+        multiplier = float(args[0])
         state = self.data_instance.load_state(chat_id)
         name: str
         for name in state.keys():
-            state[name] = float(state[name]) * multiplier
-
-        if self.data_instance.save_state(state, chat_id):
-            return ("State multiplied", 1)
-        else:
-            raise DebitHandler.forbidden_action_exception("Sum is not 0")
+            print(state)
+            state[name] = state[name] * multiplier
+        
+        state = self.fix_state_inbalance(state)
+        print(state)
+        self.data_instance.save_state(state, chat_id)
 
     @staticmethod
     def invertNumberSignFromArray(args:list):
@@ -606,7 +672,8 @@ class DebitHandler:
                 args[args.index(i)] = str(float(i) * -1)
 
         return args
+
 if __name__ == '__main__':
-    array = ['/Transaction','3', '+','5', '-','4','-4', '/Karlo', 'Jura', "(4+90)",'/3','Gjuto',"-3"]
-    array = DebitHandler.resolvingAlgebraFormations(array)
-    print("Array:",array)
+    # test format_table
+    array = [['Karloghesgekg', 3], ['Jura', 5], ['Gjuto', 4]]
+    print("Array:\n" + DebitHandler.format_table(array, 20))
