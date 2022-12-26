@@ -2,38 +2,42 @@ import os
 import random
 import abc
 
+MAX_NUM_NAMES = 40
+MAX_NUM_GROUPS = 15
+
 class DataInteractInterface(abc.ABC):
-        @abc.abstractmethod
-        def load_state(self, chat_id) -> dict:
-            pass
+    @abc.abstractmethod
+    def load_state(self, chat_id) -> dict:
+        pass
 
-        @abc.abstractmethod
-        def save_state(self, state, chat_id):
-            pass
+    @abc.abstractmethod
+    def save_state(self, state, chat_id):
+        pass
 
-        @abc.abstractmethod
-        def load_groups(self, chat_id) -> dict:
-            pass
+    @abc.abstractmethod
+    def load_groups(self, chat_id) -> dict:
+        pass
 
-        @abc.abstractmethod
-        def save_groups(self, groups, chat_id):
-            pass
+    @abc.abstractmethod
+    def save_groups(self, groups, chat_id):
+        pass
 
-        @abc.abstractmethod
-        def load_log(self, chat_id, reverse_index) -> tuple:
-            pass
+    @abc.abstractmethod
+    def load_log(self, chat_id, reverse_index) -> tuple:
+        pass
 
-        @abc.abstractmethod
-        def save_log(self, message:str, sender_id, chat_id):
-            pass
-        
-        @abc.abstractmethod
-        def get_id_by_name(self, chat_name) -> str:
-            pass
+    @abc.abstractmethod
+    def save_log(self, message:str, sender_id, chat_id):
+        pass
+    
+    @abc.abstractmethod
+    def get_id_by_name(self, chat_name) -> str:
+        pass
         
 class DebitHandler:
     def __init__(self, data_instance: DataInteractInterface):
         self.help_path = os.path.join(os.getcwd(), "help.txt")
+        self.disc_path = os.path.join(os.getcwd(), "BotDiscription.txt")
         self.data_instance = data_instance
         self.commands = {
             "t": self.transaction,
@@ -49,6 +53,7 @@ class DebitHandler:
             "u": self.undo,
             "h": self.get_help_str,
             "help" : self.get_help_str,
+            "start" : self.get_disc_str,
             "sum": self.get_state_sum,
             "ga": self.group_add,
             "gr": self.group_delete,
@@ -56,10 +61,11 @@ class DebitHandler:
             "st": self.state_transfer,
             "sf": self.state_force,
             "sm": self.state_multiply, #state multiply
-            "reset" : self.state_reset,
             "sr" : self.state_reset,
         }
-        # 0 - just send succ message, 1 - send succ message and state, 2 - func returns string
+        # 0 - return succ message,         
+        # 1 - return succ message and state 
+        # 2 - returns respond from function
         self.succ_respond = {
             "t" : ("Transaction successful",1),
             "td": ("Transaction successful",1),
@@ -82,6 +88,7 @@ class DebitHandler:
             "h" : ("", 2),
             "r" : ("", 2),
             "help": ("", 2),
+            "start": ("", 2),
             "sum": ("", 2),
         }
         self.exceptions_list = [
@@ -158,7 +165,7 @@ class DebitHandler:
             return False
 
     @staticmethod
-    def is_eng_str(str1):
+    def contains_letters_only(str1):
         if all(letter.isalpha() for letter in str1):
             return True
         else:
@@ -177,7 +184,7 @@ class DebitHandler:
         arrayOut = array.copy()
         arrayOut = [str(i) for i in arrayOut]
         while (i < len(arrayOut)):
-            if DebitHandler.is_eng_str(arrayOut[i]) == False:
+            if DebitHandler.contains_letters_only(arrayOut[i]) == False and DebitHandler.contains_mixed_letters_and_non_letters(arrayOut[i]) == False:
                 if isLastNum:
                     arrayOut[i - 1] = arrayOut[i - 1] + arrayOut[i]
                     arrayOut.pop(i)
@@ -196,11 +203,15 @@ class DebitHandler:
         return arrayOut
 
     def group_add(self, args, chat_id):
+        groups = self.data_instance.load_groups(chat_id)
+
+        if len(groups) >= MAX_NUM_GROUPS:
+            raise DebitHandler.forbidden_action_exception("Too many groups")
         state = self.data_instance.load_state(chat_id)
+
         key_word = args[0].upper()
         members = set(map(lambda x: x.capitalize(), args[1:]))
 
-        groups = self.data_instance.load_groups(chat_id)
         if key_word in groups:
             raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
         else:
@@ -291,10 +302,15 @@ class DebitHandler:
         return True
 
     def state_force(self, args, chat_id):
+        if len(args) % 2 != 0:
+            raise DebitHandler.invalid_arguments_exception("Invalid number of arguments")
+        if len(args)/2 >MAX_NUM_NAMES:
+            raise DebitHandler.forbidden_action_exception("Too many names")
+
         state = dict()
         for i in range(0, len(args), 2):
-            if DebitHandler.is_eng_str(args[i]) == False:
-                raise DebitHandler.invalid_arguments_exception("Name must contain letters only (Eng)", args[i])
+            if DebitHandler.contains_letters_only(args[i]) == False:
+                raise DebitHandler.invalid_arguments_exception("Name must contain letters only", args[i])
 
             elif args[i].capitalize() in state:
                 raise DebitHandler.duplicate_name_exception("Duplicate name", args[i])
@@ -405,16 +421,25 @@ class DebitHandler:
 
     def get_help_str(self, chat_id):
         with open(self.help_path, "r", encoding="utf-8") as f:
-            help_str = "".join(f.readlines())
+            disc_str = "".join(f.readlines())
             
-        return help_str
+        return disc_str
+
+    def get_disc_str(self, *args):
+        with open(self.disc_path, "r", encoding="utf-8") as f:
+            disc_str = "".join(f.readlines())
+            
+        return disc_str
 
     def name_add(self, args, chat_id):
         state = self.data_instance.load_state(chat_id)
+        if len(state.keys()) + len(args) > MAX_NUM_NAMES:
+            raise DebitHandler.forbidden_action_exception(f"Too many names (max {MAX_NUM_NAMES})")
+
         names = set([x.capitalize() for x in args])
 
         for name in names:
-            if not self.is_eng_str(name):
+            if not self.contains_letters_only(name):
                 raise DebitHandler.invalid_arguments_exception("Name must contain letters only", name)
 
             elif name in state:
@@ -452,7 +477,7 @@ class DebitHandler:
 
         name, new_name = args[0].capitalize(), args[1].capitalize()
 
-        if not self.is_eng_str(new_name):
+        if not self.contains_letters_only(new_name):
             raise DebitHandler.invalid_arguments_exception("Name must contain letters only", new_name)
 
         elif name not in state:
@@ -621,6 +646,8 @@ class DebitHandler:
 
     def get_random_name(self, chat_id):
         state = self.data_instance.load_state(chat_id)
+        if len(state) == 0:
+            raise DebitHandler.data_missing_exception()
         keys = list(state.keys())
         return (random.choice(keys), 0)
 

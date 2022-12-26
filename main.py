@@ -1,5 +1,5 @@
 # -*- coding: UTF8 -*-
-import requests
+import requests, datetime
 import json
 import os
 from DynamoDBDataClass import DynamoDBDataClass
@@ -11,10 +11,13 @@ TOKEN = os.environ["TELEGRAM_TOKEN"]
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 testerId = 1217535067
+NUM_COMM_BEFORE_CAP = 50 # how many commands before the cap is applied
+MAX_COMM_PER_MIN = 2 # max commands per minute after the cap is applied
 
 t = DynamoDBDataClass()
 DH = DebitHandler(t)
 CC = CCHandler()
+
 
 def get_updates(offset=0, timeout=30):  # 30
     method = "getUpdates"
@@ -60,34 +63,86 @@ def show(current_update):
     print(f"{chat_id}: {user} - {text}")
 
 
-def filter_update(update):
-    if "message" not in update or "text" not in update["message"] or update["message"]["text"][0] != "/":
-        return True
+def non_commands_filter(funk):
+    def inner(update, *args, **kwargs):
+        if "message" not in update or "text" not in update["message"]:
+            return False
 
-    return False
+        if update["message"]["text"][0] != "/":
+            return False
+
+        return funk(update, *args, **kwargs)
+
+    return inner
+
+def spam_filter(funk):
+    def inner(update, *args, **kwargs):
+        chat_id = update["message"]["chat"]["id"]
+
+        if "testMode" in kwargs and chat_id == testerId and kwargs["testMode"] == True:
+            return funk(update, *args, **kwargs)
+
+        log = t.load_log(chat_id, reverse_index=NUM_COMM_BEFORE_CAP)
+
+        if log == {}:
+            return funk(update, *args, **kwargs)
+        
+        date = log["date_time"]
+        
+        log_date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+        now_date = datetime.datetime.now()
+
+        difference = (now_date - log_date).total_seconds()
+        max_difference = NUM_COMM_BEFORE_CAP * 60 / MAX_COMM_PER_MIN
+
+        if difference < max_difference:
+            return False
+
+        else:
+            return funk(update, *args, **kwargs)
+    
+    return inner
+
+def test_interupt_filter(funk):
+    def inner(*args, **kwargs):
+        event = args[0]
+        if "testMode" not in kwargs:
+            return funk(event, testMode=False)
+        
+        else:
+            if kwargs["testMode"] == True:
+                chat_id = event["message"]["chat"]["id"]
+                if chat_id == testerId:
+                    return funk(*args, **kwargs)
+                else:
+                    send_message(chat_id, "Maintenance mode, try again later")
+                    return False
+            else:
+                return funk(*args, **kwargs)
+
+    return inner
 
 def aws_lambda_handler(event, context):
     if isinstance(event, str):
         event = json.loads(event)
     update = event["body"]
+    
+    if isinstance(update, str):
+        update = json.loads(update)
     process_event(update)
     return {"statusCode": 200}
 
+
 # for AWS Lambda to work, needs one function to be called
+@non_commands_filter
+@spam_filter
+@test_interupt_filter
 def process_event(event, testMode=False):
     try:
-        if filter_update(event):
-            return
 
         chat_id = event["message"]["chat"]["id"]
         message_id = event["message"]["message_id"]
         sender_id = event["message"]["from"]["id"]
-
-        if testMode:
-            if sender_id != testerId:
-                msg_out = "Maintenance mode, try again later"
-                reply_to_message(chat_id = chat_id, text = msg_out, message_id = message_id)
-                return False
 
         message = (
             event["message"]["text"]
@@ -123,7 +178,7 @@ def process_event(event, testMode=False):
         else:
             msg_out = "Unknown command"
         #send_message(chat_id = chat_id, text = msg_out)
-        reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
+        reply_to_message(chat_id = chat_id, text = msg_out, message_id = message_id)
 
     except Exception as e:  #    ERROR
         # check if error is from DebitHandler
@@ -131,7 +186,8 @@ def process_event(event, testMode=False):
             msg_out = str(e)
         else:
             if testMode:
-                #pass
+                print(e)
+                pass
                 raise e
             msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
             msg_out = "Invalid command"

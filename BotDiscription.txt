@@ -1,0 +1,49 @@
+Keep track of debts between you and your friends with this Telegram bot. Record payments in the bot instead of exchanging physical cash. The bot tracks balances, making it easy to keep track of debts and resolve them. 
+It is not a bank, it works just for groups of friends where you trust someone that they will pay back what they owe.
+
+<b>Start</b>
+To start using the bot, you need to add it to your group chat. You could also use it in private chats but it is more convenient to use it in a group where all transactions are visible to everyone.
+To initialize the groups state, add names of your friends by command (name add) /na:
+<pre>/na name1 name2 name3</pre>
+Outcome:
+<pre>name1  0.00
+name2  0.00
+name3  0.00</pre>
+
+<b>Transaction</b>
+There are different types of transactions command that save you time and effort. 
+One to one transaction can be recorded by /t command:
+<pre>/t name1 name2 100</pre>
+Outcome:
+<pre>name1 + 100.00
+name2 - 100.00
+name3     0.00</pre>
+This means that name1 paid 100 to name2 (this could be $ or any valute you use) so name2 now owes 100 to <b>someone</b> and name1 is missing 100 from his wallet.
+Next time name2 will pay someone else and his debt will be reduced.
+
+If name1 payed for multiple people, you can use /t command with multiple names:
+<pre>/t name1 name2 50 name3 100</pre>
+Outcome:
+<pre>name1 + 150.00
+name2 -  50.00
+name3 - 100.00</pre>
+
+If name1 payed for a multiple people and they are <b>splitting</b> the bill, you can use (transaction division) /td:
+<pre>/td name1 name2 name3 90</pre>
+Outcome:
+<pre>name1 + 60.00
+name2 - 30.00
+name3 - 30.00</pre>
+
+If you have consistent group of friend that are frequently splitting the bill, you can create a <b>group</b> inside your chat:
+<pre>/ga group1 name1 name2 name3 name4</pre>
+Now if someone from this group payed for the bill for the group1, you can use /tg command:
+<pre>/tg name1 group1 100</pre>
+Outcome:
+<pre>name1 + 75.00
+name2 - 25.00
+name3 - 25.00
+name4 - 25.00</pre>
+That will work the same as /td command but will be more convenient to use.
+
+These are the essential commands, you can find more by typing /help.

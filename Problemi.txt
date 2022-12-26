@@ -6,4 +6,6 @@ kaosMjer
 
 Permissions
 
+Name auto-filler
+
 bot controller

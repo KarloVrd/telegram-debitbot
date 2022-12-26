@@ -62,13 +62,12 @@ class DynamoDBDataClass(DataInteractInterface):
     def load_log(self, chat_id: int, reverse_index: int) -> dict:
         response = self.table.get_item(
             Key={"chat_id": chat_id},
-            ProjectionExpression = "logs[0]"
+            ProjectionExpression = f"logs[{reverse_index}]"
         )
-        print(response)
         index = reverse_index
         if "Item" in response and "logs" in response["Item"]:
 
-            return response["Item"]["logs"][index]
+            return response["Item"]["logs"][0]
         else:
             return dict()
         

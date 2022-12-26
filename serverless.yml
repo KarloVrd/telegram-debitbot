@@ -7,6 +7,7 @@ provider:
   region: eu-central-1
   environment:
     TELEGRAM_TOKEN: ${env:TELEGRAM_TOKEN}
+    DYNAMODB_TABLE_NAME: DebitBotDB
 
 
 
