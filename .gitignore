@@ -1,8 +1,8 @@
 .serverless
 .env
-.help_org.txt
-.event.json
-.Problemi.txt
-.serverless.yml
-.__pycache__
+help_old.txt
+event.json
+Problemi.txt
+serverless.yml
+__pycache__
 custom_comm.txt
