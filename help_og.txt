@@ -1,0 +1,112 @@
+<b>Name Add</b>
+Adds users to list.
+/na [user] * n
+/na tvrtko karlo jura
+
+<b>Name Remove</b>
+Removes user, only if balance = 0.
+/nr [user]
+/nr tvrtko
+
+<b>Name Change</b>
+Changes username
+/nc [old username] [new username]
+/nc tvrtko tvrtkonator
+
+<b>Group Create</b>
+Creates group
+/gc [group name] [user] * n
+/gc party karlo tvrtko jura grgur
+
+<b>Group Remove</b>
+Removes group
+/gr [group name]
+/gr party
+
+<b>Group List</b>
+Returns a list of groups
+/gl
+
+<b>Transaction</b>
+Make transaction
+/t [surplus user] ([deficit user] [amount]) * n
+/t tvrtko karlo 10
+/t tvrtko karlo 10 grgur 20 jura 15
+
+<b>Transaction Division</b>
+Make transaction that divides deficit among all people listed (including surplus user).
+/td [surplus user] [deficit user] * n [amount]
+/td tvrtko karlo grgur jura 1000
+
+<b>Transaction Group</b>
+Functions like Transaction division but with preselected users saved in a group.
+/tg [surplus user] [group name] [amount]
+/tg tvrtko party 500
+
+<b>Transaction Division Excluding</b>
+Make transaction that divides deficit among all people listed (excluding surplus user).
+/tdex [surplus user] [deficit user] * n [amount]
+/tdex tvrtko karlo grgur jura 900
+
+<b>Transaction Group Excluding</b>
+Functions like Transaction Division Excluding but with preselected users saved in a group.
+/tgex [surplus user] [group name] [amount]
+/tgex tvrtko party 500
+
+<b>Undo</b>
+Undoes last transaction (Only transactions).
+/u
+
+<b>State</b>
+Returns state
+/s
+
+<b>State Force</b>
+Allows user to set the state manually. Inbalance will be divided among users.
+/sf ([user] [balance]) * n
+/sf tvrtko 10 grgur 5 jura -5 karlo -10
+
+<b>State multiply</b>
+Multiplies state by provided number.
+/sm [number]
+/sm 7.53
+
+<b>State Reset</b>
+Resets state to 0
+/sr
+
+<b>Random</b>
+Returns random user from a list
+/r
+
+<b>Custom command</b>
+Returns output for custom command
+/[custom command]
+
+<b>Custom Commands List</b>
+Returns list of custom commands
+/cl
+
+<b>Command Add</b>
+Creates custom command
+/ca [command] [output]
+
+<b>Command Remove</b>
+Removes custom command
+/cr [command]
+
+<b>Help</b>
+Returns help message
+/h
+
+<b>Command Tips 'n' Tricks</b>
+You can put math expresions as amount. 
+/t tvrtko karlo 5*7.53
+
+You can put '#' to comment your transaction.
+/t tvrtko karlo 20 #money for lunch
+
+Spaces, tabs and line breaks do not matter.
+/t tvtko   karlo 
+19       +17
+#lunch
