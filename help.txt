@@ -94,3 +94,6 @@ Spaces, tabs and line breaks do not matter.
 /t tvtko   karlo 
 19       +17
 #lunch
+
+In Telegram aplication, navigate to Search and type @OmegaDebitBot. Click on the bot and then click on the Start button. You can now use the bot.
+"""
