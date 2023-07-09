@@ -212,19 +212,19 @@ class DebitHandler:
 
         key_word = args[0].upper()
     
-        # test if group has special indexes
-        args_string = " ".join(args)
+        # # test if group has special indexes
+        # args_string = " ".join(args)
 
-        members = {}
+        # members = {}
 
-        # setting default indexes if not specified
-        regex = r'^(\p{L}+ )*\p{L}+$'   # regex for list of names
-        if re.match(regex, args_string) != None:
-            for i in args[1:]:
-                members[i.capitalize()] = 1
-        else:
-            for i in range(0, len(args), 2):
-                members[args] = float(args[i + 1])
+        # # setting default indexes if not specified
+        # regex = r'^(\p{L}+ )*\p{L}+$'   # regex for list of names
+        # if re.match(regex, args_string) != None:
+        #     for i in args[1:]:
+        #         members[i.capitalize()] = 1
+        # else:
+        #     for i in range(0, len(args), 2):
+        #         members[args] = float(args[i + 1])
 
         if key_word in groups:
             raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
