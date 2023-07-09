@@ -11,7 +11,7 @@ class TextFileDataClass(DataInteractInterface):
     def load_state(self, chat_id) -> dict:
         state = dict()  
         chat_id = str(chat_id)
-        # open any file with the chat_id infront
+        # open any file with the chat_id upfront
         path_list = glob.glob(os.path.join(self.states_path, chat_id + "*.txt"))
         if len(path_list) == 1:
 

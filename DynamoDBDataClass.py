@@ -4,12 +4,12 @@ import os
 import datetime
 from decimal import Decimal
 import json
-talbe_name = os.environ["DYNAMODB_TABLE_NAME"]
+table_name = os.environ["DYNAMODB_TABLE_NAME"]
 
 class DynamoDBDataClass(DataInteractInterface):
     def __init__(self):
         self.dynamodb = boto3.resource("dynamodb")
-        self.table = self.dynamodb.Table(talbe_name)
+        self.table = self.dynamodb.Table(table_name)
 
     def load_state(self, chat_id: int) -> dict:
         response = self.table.get_item(

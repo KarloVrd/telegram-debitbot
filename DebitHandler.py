@@ -1,6 +1,7 @@
 import os
 import random
 import abc
+import re
 
 MAX_NUM_NAMES = 40
 MAX_NUM_GROUPS = 15
@@ -37,7 +38,7 @@ class DataInteractInterface(abc.ABC):
 class DebitHandler:
     def __init__(self, data_instance: DataInteractInterface):
         self.help_path = os.path.join(os.getcwd(), "help.txt")
-        self.disc_path = os.path.join(os.getcwd(), "BotDiscription.txt")
+        self.disc_path = os.path.join(os.getcwd(), "BotDescription.txt")
         self.data_instance = data_instance
         self.commands = {
             "t": self.transaction,
@@ -210,7 +211,20 @@ class DebitHandler:
         state = self.data_instance.load_state(chat_id)
 
         key_word = args[0].upper()
-        members = set(map(lambda x: x.capitalize(), args[1:]))
+    
+        # test if group has special indexes
+        args_string = " ".join(args)
+
+        members = {}
+
+        # setting default indexes if not specified
+        regex = r'^(\p{L}+ )*\p{L}+$'   # regex for list of names
+        if re.match(regex, args_string) != None:
+            for i in args[1:]:
+                members[i.capitalize()] = 1
+        else:
+            for i in range(0, len(args), 2):
+                members[args] = float(args[i + 1])
 
         if key_word in groups:
             raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
@@ -318,13 +332,13 @@ class DebitHandler:
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
         if self.get_state_sum(state=state) != 0:
-            state = DebitHandler.fix_state_inbalance(state)
+            state = DebitHandler.fix_state_imbalance(state)
 
         self.data_instance.save_state(state, chat_id)
         
     # state is better name for group state
     @staticmethod
-    def fix_state_inbalance(state: dict) -> dict:
+    def fix_state_imbalance(state: dict) -> dict:
         
         state = state.copy()
         state = {i: round(state[i], 2) for i in state}
@@ -688,7 +702,7 @@ class DebitHandler:
             print(state)
             state[name] = state[name] * multiplier
         
-        state = self.fix_state_inbalance(state)
+        state = self.fix_state_imbalance(state)
         print(state)
         self.data_instance.save_state(state, chat_id)
 

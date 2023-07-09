@@ -103,7 +103,7 @@ def spam_filter(funk):
     
     return inner
 
-def test_interupt_filter(funk):
+def test_interrupt_filter(funk):
     def inner(*args, **kwargs):
         event = args[0]
         if "testMode" not in kwargs:
@@ -122,6 +122,7 @@ def test_interupt_filter(funk):
 
     return inner
 
+# for AWS Lambda to work, needs one function to be called
 def aws_lambda_handler(event, context):
     if isinstance(event, str):
         event = json.loads(event)
@@ -132,11 +133,9 @@ def aws_lambda_handler(event, context):
     process_event(update)
     return {"statusCode": 200}
 
-
-# for AWS Lambda to work, needs one function to be called
 @non_commands_filter
 @spam_filter
-@test_interupt_filter
+@test_interrupt_filter
 def process_event(event, testMode=False):
     try:
 
