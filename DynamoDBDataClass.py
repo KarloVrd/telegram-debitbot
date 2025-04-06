@@ -4,6 +4,7 @@ import os
 import datetime
 from decimal import Decimal
 import json
+
 table_name = os.environ["DYNAMODB_TABLE_NAME"]
 
 class DynamoDBDataClass(DataInteractInterface):

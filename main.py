@@ -2,10 +2,13 @@
 import requests, datetime
 import json
 import os
-from DynamoDBDataClass import DynamoDBDataClass
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from DebitHandler import DebitHandler
 from CustomCommandsHandler import CCHandler
+from DynamoDBDataClass import DynamoDBDataClass
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
