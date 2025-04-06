@@ -1,5 +1,6 @@
 .serverless
 .env
+.vscode
 help_old.txt
 event.json
 Problemi.txt
