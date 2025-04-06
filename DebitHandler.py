@@ -215,7 +215,10 @@ class DebitHandler:
         # # test if group has special indexes
         # args_string = " ".join(args)
 
-        # members = {}
+        members = args[1:]
+
+        # Capitalize all names
+        members = [x.capitalize() for x in members]
 
         # # setting default indexes if not specified
         # regex = r'^(\p{L}+ )*\p{L}+$'   # regex for list of names
@@ -228,12 +231,12 @@ class DebitHandler:
 
         if key_word in groups:
             raise DebitHandler.duplicate_name_exception("Group already exists", key_word)
-        else:
-            for i in members:
-                if i not in state:
-                    raise DebitHandler.unknown_username_exception(i)
+        
+        for i in members:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
 
-            groups[key_word] = members
+        groups[key_word] = members
 
         self.data_instance.save_groups(groups, chat_id)
         return True
@@ -431,7 +434,7 @@ class DebitHandler:
 
             state_string += key.ljust(max_name_width) + " " + value + "\n"
 
-        return "<pre>" + state_string + "</pre>"
+        return "<code>" + state_string + "</code>"
 
     def get_help_str(self, chat_id):
         with open(self.help_path, "r", encoding="utf-8") as f:

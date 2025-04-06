@@ -96,4 +96,3 @@ Spaces, tabs and line breaks do not matter.
 #lunch
 
 In Telegram aplication, navigate to Search and type @OmegaDebitBot. Click on the bot and then click on the Start button. You can now use the bot.
-"""
