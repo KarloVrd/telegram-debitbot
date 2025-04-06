@@ -3,6 +3,8 @@ import random
 import abc
 import re
 
+import Util
+
 MAX_NUM_NAMES = 40
 MAX_NUM_GROUPS = 15
 
@@ -63,6 +65,7 @@ class DebitHandler:
             "sf": self.state_force,
             "sm": self.state_multiply, #state multiply
             "sr" : self.state_reset,
+            "elo": self.update_elo_rating,
         }
         # 0 - return succ message,         
         # 1 - return succ message and state 
@@ -91,6 +94,7 @@ class DebitHandler:
             "help": ("", 2),
             "start": ("", 2),
             "sum": ("", 2),
+            "elo": ("Elo rating updated successfully",1),
         }
         self.exceptions_list = [
             self.unknown_username_exception,
@@ -318,6 +322,7 @@ class DebitHandler:
         self.data_instance.save_state(data, chat_id)
         return True
 
+    # Forces the state to be set, takes whole list of names and values
     def state_force(self, args, chat_id):
         if len(args) % 2 != 0:
             raise DebitHandler.invalid_arguments_exception("Invalid number of arguments")
@@ -334,8 +339,8 @@ class DebitHandler:
                 
             state[args[i].capitalize()] = round(float(args[i + 1]), 2)
 
-        if self.get_state_sum(state=state) != 0:
-            state = DebitHandler.fix_state_imbalance(state)
+        # if self.get_state_sum(state=state) != 0:
+        #     state = DebitHandler.fix_state_imbalance(state)
 
         self.data_instance.save_state(state, chat_id)
         
@@ -447,6 +452,29 @@ class DebitHandler:
             disc_str = "".join(f.readlines())
             
         return disc_str
+    
+    # Calculates the Elo rating of a player based on the result of a match
+    # Args are list of players in order of losing: vrljo jura tomas
+    def update_elo_rating(self, args, chat_id):
+        state = self.data_instance.load_state(chat_id)
+        players = args.copy()
+        players = [x.capitalize() for x in players]
+
+        if len(players) == 0:
+            raise DebitHandler.invalid_arguments_exception("No players", players)
+
+        # check if all players are in state
+        for i in players:
+            if i not in state:
+                raise DebitHandler.unknown_username_exception(i)
+
+        new_elo = Util.calc_order_elo(state, players)
+
+        for i in players:
+            state[i] = new_elo[i]
+
+        self.data_instance.save_state(state, chat_id)
+        return True
 
     def name_add(self, args, chat_id):
         state = self.data_instance.load_state(chat_id)
