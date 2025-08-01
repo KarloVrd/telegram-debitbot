@@ -1,8 +1,10 @@
 import os, time
-from DebitHandler import DataInteractInterface, DebitHandler
+from DebitHandler import DebitHandler
 import glob
 
-class TextFileDataClass(DataInteractInterface):
+from AbstractDatabase import AbstractDatabase
+
+class TextFileDataClass(AbstractDatabase):
     def __init__(self):
         self.states_path = os.path.join(os.environ["WRITING_ROOT"], "States")
         self.groups_path = os.path.join(os.environ["WRITING_ROOT"], "Groups")

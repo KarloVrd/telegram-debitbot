@@ -1,44 +1,14 @@
 import os
 import random
-import abc
-import re
 
-import Util
+from AbstractDatabase import AbstractDatabase
+import Util.elo_util as elo_util
 
 MAX_NUM_NAMES = 40
 MAX_NUM_GROUPS = 15
-
-class DataInteractInterface(abc.ABC):
-    @abc.abstractmethod
-    def load_state(self, chat_id) -> dict:
-        pass
-
-    @abc.abstractmethod
-    def save_state(self, state, chat_id):
-        pass
-
-    @abc.abstractmethod
-    def load_groups(self, chat_id) -> dict:
-        pass
-
-    @abc.abstractmethod
-    def save_groups(self, groups, chat_id):
-        pass
-
-    @abc.abstractmethod
-    def load_log(self, chat_id, reverse_index) -> tuple:
-        pass
-
-    @abc.abstractmethod
-    def save_log(self, message:str, sender_id, chat_id):
-        pass
-    
-    @abc.abstractmethod
-    def get_id_by_name(self, chat_name) -> str:
-        pass
         
 class DebitHandler:
-    def __init__(self, data_instance: DataInteractInterface):
+    def __init__(self, data_instance: AbstractDatabase):
         self.help_path = os.path.join(os.getcwd(), "help.txt")
         self.disc_path = os.path.join(os.getcwd(), "BotDescription.txt")
         self.data_instance = data_instance
@@ -460,6 +430,8 @@ class DebitHandler:
         players = args.copy()
         players = [x.capitalize() for x in players]
 
+        # 
+
         if len(players) == 0:
             raise DebitHandler.invalid_arguments_exception("No players", players)
 
@@ -468,7 +440,7 @@ class DebitHandler:
             if i not in state:
                 raise DebitHandler.unknown_username_exception(i)
 
-        new_elo = Util.calc_order_elo(state, players)
+        new_elo = elo_util.calc_order_elo(state, players)
 
         for i in players:
             state[i] = new_elo[i]

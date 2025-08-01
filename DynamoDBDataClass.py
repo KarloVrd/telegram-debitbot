@@ -1,13 +1,19 @@
-from DebitHandler import DataInteractInterface
 import boto3
 import os
 import datetime
 from decimal import Decimal
 import json
 
+from AbstractDatabase import AbstractDatabase
+
+# Load environment variables if not already loaded
+if "DYNAMODB_TABLE_NAME" not in os.environ:
+    from dotenv import load_dotenv
+    load_dotenv()
+
 table_name = os.environ["DYNAMODB_TABLE_NAME"]
 
-class DynamoDBDataClass(DataInteractInterface):
+class DynamoDBDataClass(AbstractDatabase):
     def __init__(self):
         self.dynamodb = boto3.resource("dynamodb")
         self.table = self.dynamodb.Table(table_name)
@@ -72,6 +78,21 @@ class DynamoDBDataClass(DataInteractInterface):
         else:
             return dict()
         
+    # get logs created after datetime
+    def load_log_after_time(self, chat_id: int, time: str) -> list:
+        response = self.table.get_item(
+            Key={"chat_id": chat_id},
+            AttributesToGet = ["logs"],
+            ProjectionExpression="date_time > :time",
+        )
+
+        if "Item" in response and "logs" in response["Item"]:
+            logs = response["Item"]["logs"]
+            logs_after_time = [log for log in logs if log["date_time"] > time]
+            return logs_after_time
+        else:
+            return list()
+
     # append log to the end of the list in dynamodb
     def save_log(self, chat_id: int, sender_id: int, command: str):
         # convert args to string
@@ -127,4 +148,4 @@ class DynamoDBDataClass(DataInteractInterface):
 
 if __name__ == "__main__":
     data = DynamoDBDataClass()
-    print(data.load_log(1217535067,0))
+    print(data.load_log_after_time(1217535067, "2025-10-01 00:00:00"))
