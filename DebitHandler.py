@@ -151,6 +151,22 @@ class DebitHandler:
         return any(letter.isalpha() for letter in string) and any(
             not letter.isalpha() for letter in string
         )
+    @staticmethod
+    def contains_math_symbols_only(string):
+        math_symbols = set("+-*/()0123456789")
+        return all(letter in math_symbols for letter in string)
+    
+    @staticmethod
+    def starts_with_number(string):
+        if string == "":
+            return False
+        return string[0].isdigit()
+    
+    @staticmethod
+    def ends_with_number(string):
+        if string == "":
+            return False
+        return string[-1].isdigit()
     
     @staticmethod
     def resolvingAlgebraFormations(array: list) -> list:
@@ -161,13 +177,17 @@ class DebitHandler:
         while (i < len(arrayOut)):
             if DebitHandler.contains_letters_only(arrayOut[i]) == False and DebitHandler.contains_mixed_letters_and_non_letters(arrayOut[i]) == False:
                 if isLastNum:
-                    arrayOut[i - 1] = arrayOut[i - 1] + arrayOut[i]
-                    arrayOut.pop(i)
+                    if arrayOut[i - 1][-1].isdigit() and arrayOut[i][0].isdigit():
+                        arrayOut[i - 1] = eval(arrayOut[i - 1])  
+                        i += 1                      
+                    else:
+                        arrayOut[i - 1] = arrayOut[i - 1] + arrayOut[i]
+                        arrayOut.pop(i)
                 else:
                     i += 1
                 isLastNum = True
             else:
-                if isLastNum == True:
+                if isLastNum == True:  
                     arrayOut[i-1] = eval(arrayOut[i-1])
                 isLastNum = False
                 i += 1
@@ -176,6 +196,27 @@ class DebitHandler:
             arrayOut[-1] = eval(arrayOut[-1])
 
         return arrayOut
+
+
+    @staticmethod
+    def resolvingAlgebraFormationsStack(array: list) -> list:
+        stack = []
+        for token in array:
+            if token == ")":
+                # Pop until we find the matching "("
+                expr = []
+                while stack and stack[-1] != "(":
+                    expr.append(stack.pop())
+                expr.reverse()
+                if not stack:
+                    raise ValueError("Mismatched parentheses")
+                stack.pop()  # Remove the "("
+                # Evaluate  the expression inside the parentheses
+                result = eval("".join(expr))
+                stack.append(result)
+            else:
+                stack.append(token)
+        return stack
 
     def group_add(self, args, chat_id):
         groups = self.data_instance.load_groups(chat_id)
@@ -336,6 +377,7 @@ class DebitHandler:
 
     def commands_API(self, command_code: str, args: list, chat_id: int) -> bool:
         args = DebitHandler.resolvingAlgebraFormations(args)
+        print(f"Command: {command_code}, args: {args}, chat_id: {chat_id}")
         if args == list():
             res = self.commands[command_code](chat_id)
         else:
@@ -546,27 +588,85 @@ class DebitHandler:
         return True
 
     def transaction_division(self, args, chat_id):
-        state = self.data_instance.load_state(chat_id)
+        '''
+        Args:
+            don: The name of the person who is dividing the money.
+            recs:
+                - name of the person who is dividing the money
+                - {optional} multiplier for the amount of money each recipient receives, 
+                    if not specified it is 1 for that person
+            money: The total amount of money to be divided.
+        '''
+        # state = self.data_instance.load_state(chat_id)
 
+        # don = args[0].capitalize()
+        # recs = list(map(lambda x: x.capitalize(), args[1:-1]))
+        # money = float(args[-1])
+
+        # if don not in state:
+        #     raise DebitHandler.unknown_username_exception(don)
+
+        # for i in recs:
+        #     if i not in state:
+        #         raise DebitHandler.unknown_username_exception(i)
+        
+        # money_per_person = round(money / (len(recs) + 1), 2)
+
+        # for i in recs:
+        #     state[i.capitalize()] += -1 * money_per_person
+        # state[don] += money_per_person * len(recs)
+
+        # self.data_instance.save_state(state, chat_id)
+        # return True
+
+        state = self.data_instance.load_state(chat_id)
+        recs_starting_index = 1
         don = args[0].capitalize()
-        recs = list(map(lambda x: x.capitalize(), args[1:-1]))
+        don_mult = 1
+        if DebitHandler.is_num(args[1]):
+            don_mult = float(args[1])
+            recs_starting_index = 2
+
+        # print(args)
+
+        recs = {}
+        i = recs_starting_index
+        while i < len(args) - 1:
+            rec = args[i].capitalize()
+            if rec in recs:
+                raise DebitHandler.duplicate_name_exception("Duplicate name", rec)
+            
+            if rec not in state:
+                raise DebitHandler.unknown_username_exception(rec)
+
+            if i+1 < len(args) - 1 and DebitHandler.is_num(args[i+1]):
+                mult = float(args[i + 1])
+                if mult < 0:
+                    raise DebitHandler.invalid_arguments_exception("Multiplier must be positive", mult)
+                recs[rec] = round(mult, 2)
+                i += 1
+            else:
+                recs[rec] = 1.0
+            
+            i += 1
+
         money = float(args[-1])
 
         if don not in state:
             raise DebitHandler.unknown_username_exception(don)
-
-        for i in recs:
-            if i not in state:
-                raise DebitHandler.unknown_username_exception(i)
         
-        money_per_person = round(money / (len(recs) + 1), 2)
+        amount_of_mults = sum(recs.values()) + don_mult
+
+        if amount_of_mults == 0:
+            return True
 
         for i in recs:
-            state[i.capitalize()] += -1 * money_per_person
-        state[don] += money_per_person * len(recs)
+            state[i] += -1 * round(money * (recs[i] / amount_of_mults), 2)
+        state[don] += round(money * (amount_of_mults - don_mult) / amount_of_mults, 2)
 
         self.data_instance.save_state(state, chat_id)
         return True
+
 
     def division_transaction_excluding(self, args, chat_id):
         state = self.data_instance.load_state(chat_id)

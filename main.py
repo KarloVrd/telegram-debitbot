@@ -224,6 +224,6 @@ if __name__ == "__main__":
         ap = BotApi()
         print("Start")
         while True:
-            ap.process_updates(timeout = 30 , testMode=True)
+            ap.process_updates(timeout = 4 , testMode=True)
     except KeyboardInterrupt:
         exit()
