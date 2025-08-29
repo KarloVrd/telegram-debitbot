@@ -3,6 +3,8 @@ import random
 
 from AbstractDatabase import AbstractDatabase
 import Util.elo_util as elo_util
+from StatsCalculator import StatsCalculatorManager
+from ExtendedStatsCalculators import add_extended_calculators
 
 MAX_NUM_NAMES = 40
 MAX_NUM_GROUPS = 15
@@ -12,6 +14,15 @@ class DebitHandler:
         self.help_path = os.path.join(os.getcwd(), "help.txt")
         self.disc_path = os.path.join(os.getcwd(), "BotDescription.txt")
         self.data_instance = data_instance
+        self.stats_manager = StatsCalculatorManager()
+        
+        # Add extended calculators
+        try:
+            add_extended_calculators(self.stats_manager)
+        except ImportError:
+            # Extended calculators not available, continue with basic ones
+            pass
+            
         self.commands = {
             "t": self.transaction,
             "td": self.transaction_division,
@@ -36,6 +47,10 @@ class DebitHandler:
             "sm": self.state_multiply, #state multiply
             "sr" : self.state_reset,
             "elo": self.update_elo_rating,
+            "stats": self.get_stats,
+            "stat": self.get_specific_stat,
+            "statsall": self.get_all_stats,
+            "statlist": self.get_available_stats,
         }
         # 0 - return succ message,         
         # 1 - return succ message and state 
@@ -65,6 +80,10 @@ class DebitHandler:
             "start": ("", 2),
             "sum": ("", 2),
             "elo": ("Elo rating updated successfully",1),
+            "stats": ("", 2),
+            "stat": ("", 2),
+            "statsall": ("", 2),
+            "statlist": ("", 2),
         }
         self.exceptions_list = [
             self.unknown_username_exception,
@@ -196,27 +215,6 @@ class DebitHandler:
             arrayOut[-1] = eval(arrayOut[-1])
 
         return arrayOut
-
-
-    @staticmethod
-    def resolvingAlgebraFormationsStack(array: list) -> list:
-        stack = []
-        for token in array:
-            if token == ")":
-                # Pop until we find the matching "("
-                expr = []
-                while stack and stack[-1] != "(":
-                    expr.append(stack.pop())
-                expr.reverse()
-                if not stack:
-                    raise ValueError("Mismatched parentheses")
-                stack.pop()  # Remove the "("
-                # Evaluate  the expression inside the parentheses
-                result = eval("".join(expr))
-                stack.append(result)
-            else:
-                stack.append(token)
-        return stack
 
     def group_add(self, args, chat_id):
         groups = self.data_instance.load_groups(chat_id)
@@ -802,12 +800,59 @@ class DebitHandler:
         state = self.data_instance.load_state(chat_id)
         name: str
         for name in state.keys():
-            print(state)
             state[name] = state[name] * multiplier
         
         state = self.fix_state_imbalance(state)
-        print(state)
         self.data_instance.save_state(state, chat_id)
+
+        return True
+    
+    def get_specific_stat(self, args, chat_id):
+        """Get a specific statistic by type"""
+        if len(args) != 1:
+            raise DebitHandler.invalid_arguments_exception("Usage: /stat <stat_type>", " ".join(args))
+        
+        stat_type = args[0].lower()
+        
+        # Check if calculator exists first
+        stat_class = self.stats_manager.get_stat_instance(stat_type)
+        if stat_class is None:
+            available_stats = ", ".join(self.stats_manager.get_available_stats())
+            raise DebitHandler.invalid_arguments_exception(
+                f"Unknown stat type '{stat_type}'. Available: {available_stats}", stat_type
+            )
+        
+        # Load only required data
+        logs = None
+        state = None
+        
+        if stat_class.requires_logs():
+           logs = self.data_instance.load_logs(chat_id, False)
+             
+        if stat_class.requires_state():
+            state = self.data_instance.load_state(chat_id)
+
+        # Calculate the statistic
+        result = self.stats_manager.calculate_stat(stat_type, logs, state)
+        
+        if result is None:
+            raise DebitHandler.data_missing_exception(f"Failed to calculate {stat_type}")
+        
+        return result
+    
+    def get_all_stats(self, chat_id):
+        """Get all available statistics"""
+        logs = self.data_instance.load_logs(chat_id, False)
+        if len(logs) == 0:
+            raise DebitHandler.data_missing_exception("No logs found")
+        
+        state = self.data_instance.load_state(chat_id)
+        return self.stats_manager.calculate_all_stats(logs, state)
+    
+    def get_available_stats(self, chat_id):
+        """Get list of available statistic types"""
+        available = self.stats_manager.get_available_stats()
+        return "Available statistics:\n" + "\n".join(f"• {stat}" for stat in available)
 
     @staticmethod
     def invertNumberSignFromArray(args:list):

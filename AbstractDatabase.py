@@ -18,6 +18,10 @@ class AbstractDatabase(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def load_logs(self, chat_id, reverse_index) -> list:
+        pass
+
+    @abc.abstractmethod
     def load_log(self, chat_id, reverse_index) -> tuple:
         pass
 

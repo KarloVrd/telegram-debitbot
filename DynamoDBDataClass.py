@@ -78,6 +78,20 @@ class DynamoDBDataClass(AbstractDatabase):
         else:
             return dict()
         
+    # load all logs in the list
+    def load_logs(self, chat_id: int, reverse_index: int) -> list:
+        response = self.table.get_item(
+            Key={"chat_id": chat_id},
+            AttributesToGet = ["logs"]
+        )
+
+        if "Item" in response and "logs" in response["Item"]:
+            logs = response["Item"]["logs"]
+            if reverse_index < 0:
+                return logs
+            else:
+                return logs[-reverse_index:]
+        
     # get logs created after datetime
     def load_log_after_time(self, chat_id: int, time: str) -> list:
         response = self.table.get_item(
