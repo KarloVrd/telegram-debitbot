@@ -43,13 +43,13 @@ Functions like Transaction division but with preselected names saved in a group.
 /tg [surplus name] [group name] [amount]
 /tg tvrtko party 500
 
-<b>Transaction Division Excluding</b>
+<b>Transaction Division Exclusion</b>
 Make transaction that divides deficit among all people listed (excluding surplus name).
 /tdex [surplus name] [deficit name] * n [amount]
 /tdex tvrtko karlo grgur jura 900
 
-<b>Transaction Group Excluding</b>
-Functions like Transaction Division Excluding but with preselected names saved in a group.
+<b>Transaction Group Exclusion</b>
+Functions like Transaction Division Exclusion but with preselected names saved in a group.
 /tgex [surplus name] [group name] [amount]
 /tgex tvrtko party 500
 
@@ -62,7 +62,7 @@ Returns state
 /s
 
 <b>State Force</b>
-Allows user to set the state manually. Inbalance will be divided among names.
+Allows user to set the state manually. Imbalance will be divided among names.
 /sf ([name] [balance]) * n
 /sf tvrtko 10 grgur 5 jura -5 karlo -10
 
@@ -75,6 +75,15 @@ Multiplies state by provided number.
 Resets state to 0
 /sr
 
+<b>State Transfer Initialize</b>
+If you have multiple groups with the same usernames, you can initialize a state transfer by generating a transfer code.
+```/st```
+
+<b>State Transfer Destination</b>
+Pastes the transfer code to a different group. The transfer will only succeed if all states from the first group exist in the destination group.
+It will add the state of the first group to the second group and reset the state of the first group.
+```/std [transfer code]```
+
 <b>Random</b>
 Returns random name from a list
 /r
@@ -84,15 +93,15 @@ Returns help message
 /h
 
 <b>Command Tips 'n' Tricks</b>
-You can put math expresions as amount. 
+You can put math expressions as amount. 
 /t tvrtko karlo 5*7.53
 
 You can put '#' to comment your transaction.
 /t tvrtko karlo 20 #money for lunch
 
 Spaces, tabs and line breaks do not matter.
-/t tvtko   karlo 
+/t tvrtko   karlo 
 19       +17
 #lunch
 
-In Telegram aplication, navigate to Search and type @OmegaDebitBot. Click on the bot and then click on the Start button. You can now use the bot.
+In Telegram application, navigate to Search and type @OmegaDebitBot. Click on the bot and then click on the Start button. You can now use the bot.

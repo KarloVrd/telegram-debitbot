@@ -325,6 +325,9 @@ class DebitHandler:
         if transfer["date_time"].timestamp() < (time.time() - TRANS_CODE_TIMEOUT_SECONDS):
             raise DebitHandler.invalid_arguments_exception("Transfer code expired", code)
 
+        if transfer["chat_id"] == chat_id:
+            raise DebitHandler.invalid_arguments_exception("Cannot transfer to the same chat", code)
+
         state_src = self.data_instance.load_state(transfer["chat_id"])
 
         members = state_src.items()
