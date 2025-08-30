@@ -12,11 +12,13 @@ if "DYNAMODB_TABLE_NAME" not in os.environ:
     load_dotenv()
 
 table_name = os.environ["DYNAMODB_TABLE_NAME"]
+table_name_trans = os.environ["CODES_TABLE_NAME"]
 
 class DynamoDBDataClass(AbstractDatabase):
     def __init__(self):
         self.dynamodb = boto3.resource("dynamodb")
         self.table = self.dynamodb.Table(table_name)
+        self.table_trans = self.dynamodb.Table(table_name_trans)
 
     def load_state(self, chat_id: int) -> dict:
         response = self.table.get_item(
@@ -37,11 +39,11 @@ class DynamoDBDataClass(AbstractDatabase):
         self.table.update_item(
             Key={"chat_id": chat_id},
             AttributeUpdates={
-            'state': {
-                'Value': state,
-                'Action': 'PUT'
+                'state': {
+                    'Value': state,
+                    'Action': 'PUT'
+                }
             }
-    }
         )
 
     def load_groups(self, chat_id: int) -> dict:
@@ -144,7 +146,27 @@ class DynamoDBDataClass(AbstractDatabase):
             Key={"chat_id": chat_id},
             UpdateExpression="REMOVE logs[{}]".format(index)
         )
-        
+
+    def save_transfer(self, code, chat_id, date_time) -> None:
+        date_time_str = date_time.strftime("%Y-%m-%d %H:%M:%S")
+        item = {
+            "code": code,
+            "chat_id": chat_id,
+            "date_time": date_time_str,
+            "used": False
+        }
+        self.table_trans.put_item(Item=item)
+
+    def load_transfer(self, code) -> dict:
+        response = self.table_trans.get_item(
+            Key={"code": code}
+        )
+        # change date_time string to python datetime
+        item = response.get("Item", {})
+        if item and "date_time" in item:
+            item["date_time"] = datetime.datetime.strptime(item["date_time"], "%Y-%m-%d %H:%M:%S")
+        return item
+
     def get_id_by_name(self, chat_name) -> str:
         return 0
 

@@ -36,3 +36,11 @@ class AbstractDatabase(abc.ABC):
     @abc.abstractmethod
     def load_log_after_time(self, chat_id, time, reverse_index, ) -> list:
         pass
+
+    @abc.abstractmethod
+    def save_transfer(self, code, chat_id, date_time) -> None:
+        pass
+
+    @abc.abstractmethod
+    def load_transfer(self, code) -> dict:
+        pass

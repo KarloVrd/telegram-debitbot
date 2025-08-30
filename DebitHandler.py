@@ -1,5 +1,8 @@
 import os
 import random
+import string
+import time
+import datetime
 
 from AbstractDatabase import AbstractDatabase
 import Util.elo_util as elo_util
@@ -8,7 +11,8 @@ from ExtendedStatsCalculators import add_extended_calculators
 
 MAX_NUM_NAMES = 40
 MAX_NUM_GROUPS = 15
-        
+TRANS_CODE_TIMEOUT_SECONDS = 60 * 5 # 5 minutes
+
 class DebitHandler:
     def __init__(self, data_instance: AbstractDatabase):
         self.help_path = os.path.join(os.getcwd(), "help.txt")
@@ -42,15 +46,15 @@ class DebitHandler:
             "ga": self.group_add,
             "gr": self.group_delete,
             "gl": self.get_groups_string,
-            "st": self.state_transfer,
+            "st": self.state_transfer_init,
+            "std": self.state_transfer_destination,
             "sf": self.state_force,
             "sm": self.state_multiply, #state multiply
             "sr" : self.state_reset,
             "elo": self.update_elo_rating,
-            "stats": self.get_stats,
             "stat": self.get_specific_stat,
             "statsall": self.get_all_stats,
-            "statlist": self.get_available_stats,
+            "statslist": self.get_available_stats,
         }
         # 0 - return succ message,         
         # 1 - return succ message and state 
@@ -69,7 +73,8 @@ class DebitHandler:
             "gr": ("Group removed successfully",0),
             "gl": ("", 2),
             "s" : ("", 2),
-            "st": ("State transfer successful",1),
+            "st": ("", 2),
+            "std": ("State transfer successful",1),
             "sf": ("State forced successfully",1),
             "sm": ("State multiplied successfully",1),
             "sr": ("State reset successfully",1),
@@ -295,32 +300,44 @@ class DebitHandler:
             raise DebitHandler.unknown_group_exception(dest_group_name)
         return dest_chat_id
 
-    def state_transfer(self, args, chat_id):
-        dest_group_name = args[0]
-        dest_chat_id = self.find_dest_chat_id(dest_group_name)
+    def state_transfer_init(self, chat_id):
 
-        dest_state = self.load_state(dest_chat_id)
+        # create a random transfer code, includes ascii chars and numbers in caps
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        date_time = datetime.datetime.now()
+        self.data_instance.save_transfer(code, chat_id, date_time)
+
+        msg = f"Paste this to destination chat:\n<code>/std {code}</code>"
+        return msg
+
+    def state_transfer_destination(self, args, chat_id):
         state = self.data_instance.load_state(chat_id)
 
-        members = args[1:]
-        transfer_state = dict()
-        for i in members:  #  A-ante B-bruno
-            i = i.split("-")
-            if (i[0].capitalize() not in state):
-                raise DebitHandler.unknown_username_exception(i[0])
+        code = args[0]
+        transfer = self.data_instance.load_transfer(code)
 
-            elif i[1].capitalize() not in dest_state:
-                raise DebitHandler.unknown_username_exception(i[1])
+        if not transfer:
+            raise DebitHandler.invalid_arguments_exception("Invalid code", code)
 
-            transfer_state[i[1].capitalize()] = state[i[0].capitalize()]
-        # transfer_state = {<dest ime> : <stara vrijednost>}
-        # zbraja vrijednosti dvaju stanja
+        if transfer["used"]:
+            raise DebitHandler.invalid_arguments_exception("Transfer code already used", code)
 
-        for i in transfer_state:
-            dest_state[i] += transfer_state[i]
+        if transfer["date_time"].timestamp() < (time.time() - TRANS_CODE_TIMEOUT_SECONDS):
+            raise DebitHandler.invalid_arguments_exception("Transfer code expired", code)
 
-        self.data_instance.save_state(dest_state, dest_chat_id)
-        self.state_reset(chat_id)
+        state_src = self.data_instance.load_state(transfer["chat_id"])
+
+        members = state_src.items()
+        for member, value in members:
+            member = member.capitalize()
+
+            if state_src[member] != 0 and member not in state:
+                raise DebitHandler.unknown_username_exception(member)
+            
+            state[member] += value
+
+        self.data_instance.save_state(state, chat_id)
+        self.state_reset(transfer["chat_id"])
         return True
 
     def state_reset(self, chat_id):

@@ -138,7 +138,7 @@ def aws_lambda_handler(event, context):
 
 @non_commands_filter
 @spam_filter
-@test_interrupt_filter
+# @test_interrupt_filter
 def process_event(event, testMode=False):
     try:
 
