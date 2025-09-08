@@ -10,5 +10,6 @@ custom_comm.txt
 TODO.md
 DebitBot.zip
 venv/
+logs/
 
 local

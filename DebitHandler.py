@@ -85,10 +85,9 @@ class DebitHandler:
             "start": ("", 2),
             "sum": ("", 2),
             "elo": ("Elo rating updated successfully",1),
-            "stats": ("", 2),
             "stat": ("", 2),
             "statsall": ("", 2),
-            "statlist": ("", 2),
+            "statslist": ("", 2),
         }
         self.exceptions_list = [
             self.unknown_username_exception,

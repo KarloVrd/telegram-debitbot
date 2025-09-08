@@ -2,6 +2,7 @@
 import requests, datetime
 import json
 import os
+import traceback
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,6 +12,9 @@ from CustomCommandsHandler import CCHandler
 from DynamoDBDataClass import DynamoDBDataClass
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
+LOG_PATH = os.environ.get("LOGS_PATH", "logs/logs.txt")
+ERROR_LOG_PATH = os.environ.get("ERROR_LOGS_PATH", "logs/errors.txt")
+
 url = "https://api.telegram.org/bot{}/".format(TOKEN)
 
 testerId = 1217535067
@@ -54,6 +58,14 @@ def get_user_name(current_update):
         return None
     return user
 
+def log_message(text):
+    try:
+        os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+        with open(LOG_PATH, "a") as f:
+            f.write(f"{text}\n")
+    except Exception as e:
+        print("Failed to log message:", e)
+
 def show(current_update):
     if "message" not in current_update or "text" not in current_update["message"]:
         print("Missing message")
@@ -62,9 +74,11 @@ def show(current_update):
     user = get_user_name(current_update)
     chat_id = current_update["message"]["chat"]["id"]
     text = current_update["message"]["text"]
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    print(f"{chat_id}: {user} - {text}")
-
+    log = f"[{timestamp}] {str(chat_id):>14}: {str(user):>14} - {text}"
+    print(log)
+    log_message(log)
 
 def non_commands_filter(funk):
     def inner(update, *args, **kwargs):
@@ -105,6 +119,15 @@ def spam_filter(funk):
             return funk(update, *args, **kwargs)
     
     return inner
+
+def log_error(chat_id, error_message):
+    try:
+        os.makedirs(os.path.dirname(ERROR_LOG_PATH), exist_ok=True)
+        with open(ERROR_LOG_PATH, "a") as f:
+            dateTimeStr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{dateTimeStr}] - {str(chat_id):>12} - {error_message}\n")
+    except Exception as e:
+        print("Failed to log error:", e)
 
 def test_interrupt_filter(funk):
     def inner(*args, **kwargs):
@@ -187,11 +210,13 @@ def process_event(event, testMode=False):
         if type(e) in DH.exceptions_list:
             msg_out = str(e)
         else:
-            print("ERROR:", e)
-            if testMode:
-                pass
-                raise e
             
+            # full error stack trace for logging
+            
+            error_message = traceback.format_exc()
+            log_error(chat_id, error_message)
+            print("ERROR:", error_message)
+
             # small chance of HAL9000 quote
             import random
             if random.randint(1, 500) == 1: # 0.2% chance
