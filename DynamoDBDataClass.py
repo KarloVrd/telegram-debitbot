@@ -16,7 +16,8 @@ table_name_trans = os.environ["CODES_TABLE_NAME"]
 
 class DynamoDBDataClass(AbstractDatabase):
     def __init__(self):
-        self.dynamodb = boto3.resource("dynamodb")
+        region = os.environ.get("AWS_REGION", "eu-central-1")  # fallback if not set
+        self.dynamodb = boto3.resource("dynamodb", region_name=region)
         self.table = self.dynamodb.Table(table_name)
         self.table_trans = self.dynamodb.Table(table_name_trans)
 

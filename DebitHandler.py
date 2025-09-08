@@ -334,7 +334,10 @@ class DebitHandler:
         for member, value in members:
             member = member.capitalize()
 
-            if state_src[member] != 0 and member not in state:
+            if state_src[member] == 0:
+                continue
+
+            if member not in state:
                 raise DebitHandler.unknown_username_exception(member)
             
             state[member] += value
@@ -395,7 +398,6 @@ class DebitHandler:
 
     def commands_API(self, command_code: str, args: list, chat_id: int) -> bool:
         args = DebitHandler.resolvingAlgebraFormations(args)
-        print(f"Command: {command_code}, args: {args}, chat_id: {chat_id}")
         if args == list():
             res = self.commands[command_code](chat_id)
         else:

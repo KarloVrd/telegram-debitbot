@@ -9,5 +9,6 @@ __pycache__
 custom_comm.txt
 TODO.md
 DebitBot.zip
+venv/
 
 local

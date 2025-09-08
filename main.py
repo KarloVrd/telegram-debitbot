@@ -187,12 +187,17 @@ def process_event(event, testMode=False):
         if type(e) in DH.exceptions_list:
             msg_out = str(e)
         else:
+            print("ERROR:", e)
             if testMode:
-                print(e)
                 pass
                 raise e
-            msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
-            msg_out = "Invalid command"
+            
+            # small chance of HAL9000 quote
+            import random
+            if random.randint(1, 500) == 1: # 0.2% chance
+                msg_out = "I'm sorry, Dave. I'm afraid I can't do that."
+            else:
+                msg_out = "Invalid command"
                  
         reply_to_message(chat_id = chat_id, text = msg_out, message_id = event["message"]["message_id"])
 
@@ -208,7 +213,8 @@ class BotApi:
 
         for current_update in all_updates:
             if testMode:
-                show(current_update)
+                pass
+            show(current_update)
             process_event(current_update, testMode=testMode)
             current_update_id = current_update["update_id"]
             self.new_offset = current_update_id + 1
@@ -224,6 +230,6 @@ if __name__ == "__main__":
         ap = BotApi()
         print("Start")
         while True:
-            ap.process_updates(timeout = 4 , testMode=True)
+            ap.process_updates(timeout = 30, testMode=False)
     except KeyboardInterrupt:
         exit()
