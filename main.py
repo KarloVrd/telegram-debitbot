@@ -4,11 +4,13 @@ import json
 import os
 import traceback
 
-from dotenv import load_dotenv
-load_dotenv()
+# If TELEGRAM_TOKEN is not set, try to load it from .env file
+if "TELEGRAM_TOKEN" not in os.environ:
+    from dotenv import load_dotenv
+    load_dotenv()
 
 from DebitHandler import DebitHandler
-from CustomCommandsHandler import CCHandler
+# from CustomCommandsHandler import CCHandler
 from DynamoDBDataClass import DynamoDBDataClass
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -23,7 +25,7 @@ MAX_COMM_PER_MIN = 2 # max commands per minute after the cap is applied
 
 t = DynamoDBDataClass()
 DH = DebitHandler(t)
-CC = CCHandler()
+# CC = CCHandler()
 
 
 def get_updates(offset=0, timeout=30):  # 30
